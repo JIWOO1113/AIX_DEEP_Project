@@ -1,13 +1,5 @@
 # Channels
 
-## 분석 목표
-
-UrbanSound8K 데이터셋의 wav 파일을 머신러닝 모델 입력으로 쓰기 위해 **모든 파일이 같은 채널 수(모노)로 통일**되어야 한다. 원본 데이터에 모노와 스테레오가 섞여 있기 때문이다.
-
-이 문서는 **"스테레오를 어떤 방식으로 모노로 변환할 것인가"** 를 결정하고, 그 결정의 안전성을 객관적 수치와 실제 분류 결과 모두로 검증하는 과정을 정리한다.
-
----
-
 ## 1. 원본 데이터의 채널 분포
 
 ### 1-1. FACT — 데이터셋이 어떤 채널 수를 가지는가
@@ -72,9 +64,9 @@ UrbanSound8K 8,732개 파일은 모노(1채널)와 스테레오(2채널)가 혼�
 
 ### 1-6. 전처리 단계에서 얻은 정보
 
-- 모노 통일이 필수 (모든 파일을 동일한 1채널로)
-- 8.46%의 모노 파일은 그대로 사용, 91.54%의 스테레오 파일은 변환 필요
-- 변환 방식 결정이 다음 분석의 주제
+- 채널 통일이 필수
+- 통일 방향(모노 vs 스테레오)과 변환 방식을 결정해야 함
+- 후속 분석에서 두 가지를 모두 검증
 
 ---
 
@@ -198,7 +190,7 @@ UrbanSound8K 8,732개 파일은 모노(1채널)와 스테레오(2채널)가 혼�
 
 ---
 
-## 4. 사전 점검 — 변환 방식이 실제 분류에 미치는 영향
+## 4. 사전 점검 1 — 변환 방식이 실제 분류에 미치는 영향
 
 ### 4-1. FACT — MFCC 평균 벡터 유사도와 실제 분류 정확도는 다를 수 있다
 
@@ -269,25 +261,138 @@ UrbanSound8K 8,732개 파일은 모노(1채널)와 스테레오(2채널)가 혼�
 
 ### 4-6. 전처리 단계에서 얻은 정보
 
-- 단순평균이 좌채널만 사용보다 14.4%p 우수
+- 모노 통일 시 변환 방식은 단순평균을 사용해야 함 (좌채널만 사용보다 +14.4%p 우수)
 - 좌채널만 사용 시 모든 클래스에서 정확도 하락
 - car_horn은 채널 변환 방식에 가장 민감 (-0.28)
 - MFCC 유사도만으로 결정하면 위험성 존재, 실제 분류로 검증 필요
+- 모노 통일 vs 스테레오 통일 비교는 별도 검증 필요 (다음 단계)
 
 ---
 
-## 5. 결론
+## 5. 사전 점검 2 — 모노 통일 vs 스테레오 통일
 
-### 5-1. 채널 변환 방식 결정
+### 5-1. FACT — 모노 통일과 스테레오 통일의 실제 분류 정확도를 비교한다
 
-**librosa.load의 mono=True (단순 평균)에 위임한다.**
+4단계에서 모노 통일을 전제로 변환 방식을 검증했다. 그러나 모노 통일 자체가 스테레오 통일보다 분류 성능 측면에서 우수한지는 별도로 검증한다.
+
+### 5-2. 분석 기법
+
+`scripts/preview_mono_vs_stereo.py`에서:
+- 두 시나리오로 feature 추출 및 분류 정확도 비교
+- 시나리오 A (모노 통일): 모노 그대로, 스테레오는 단순평균 → feature 50개
+- 시나리오 B (스테레오 통일): 모노는 좌=우 복제, 스테레오는 좌우 분리 → feature 104개 (L_xxx + R_xxx)
+- RandomForest Classifier + 5-fold Cross-Validation
+
+### 5-3. 결과
+
+#### 시나리오별 정확도
+
+| 시나리오 | feature 수 | 전체 정확도 |
+|---|---:|---:|
+| 시나리오 A: 모노 통일 | 50 | 0.8745 |
+| 시나리오 B: 스테레오 통일 | 104 | 0.8973 |
+| 차이 | +54 | +2.28%p |
+
+#### 클래스별 정확도 비교
+
+| 클래스 | 모노 통일 | 스테레오 통일 | 차이 |
+|---|---:|---:|---:|
+| street_music | 0.82 | 0.91 | +0.09 |
+| children_playing | 0.81 | 0.85 | +0.04 |
+| dog_bark | 0.82 | 0.85 | +0.03 |
+| air_conditioner | 0.91 | 0.93 | +0.02 |
+| siren | 0.91 | 0.92 | +0.01 |
+| drilling | 0.87 | 0.88 | +0.01 |
+| car_horn | 0.78 | 0.79 | +0.01 |
+| engine_idling | 0.94 | 0.94 | 0.00 |
+| jackhammer | 0.94 | 0.94 | 0.00 |
+| gun_shot | 0.94 | 0.93 | -0.01 |
+
+### 5-4. 시각화
+
+![모노 vs 스테레오 통일](mono_vs_stereo_preview.png)
+
+### 5-5. 결과 해석
+
+- 스테레오 통일 정확도 0.8973 > 모노 통일 0.8745 (+2.28%p)
+- 8개 클래스 개선, 2개 클래스 동일, 0개 클래스 악화
+- 가장 큰 개선: street_music (+0.09)
+- 스테레오 통일 feature 수 104개 (모노 통일 50개의 약 2배)
+- 스테레오 통일 데이터 크기 약 10MB (모노 통일의 약 2배)
+
+#### 측정의 한계
+
+스테레오 통일 시 정확도 개선이 (a) 스테레오의 공간 정보 효과인지 (b) feature 수 증가 효과인지 본 분석으로는 구분할 수 없다. 이를 구분하려면 추가 실험(예: 모노 feature를 104개로 늘려 비교)이 필요하다.
+
+### 5-6. 전처리 단계에서 얻은 정보
+
+- 분류 정확도만 보면 스테레오 통일이 +2.28%p 우수
+- 모든 클래스 분류 결과에서 일관된 패턴 (개선 또는 동일)
+- 다만 비용(feature 수 2배, 데이터 크기 2배, 학습 속도 2배)이 발생
+- 학계 표준 여부와 효율을 함께 고려한 최종 결정 필요
+
+---
+
+## 6. 결정 가이드
+
+### 6-1. 통일 방향 결정 — 모노 vs 스테레오
+
+분석 결과 두 선택지 모두 정당화 가능하다. 팀의 우선순위에 따라 결정한다.
+
+#### 선택지 A: 모노 통일 (학계 표준 / 효율 우선)
+
+**선택 근거**:
+1. UrbanSound8K 학계 표준 (공식 벤치마크가 22050Hz, 모노)
+2. 다른 연구와 정확도 직접 비교 가능
+3. feature 50개로 단순함
+4. 데이터 크기 절반, 학습 속도 2배 빠름
+5. 현재 ml_features.csv가 이미 모노 통일로 추출됨 (재작업 불필요)
+
+**현재 분류 정확도**: 0.8745
+
+**변환 방식**: librosa의 단순 평균 (4단계에서 검증)
+
+```python
+y, sr = librosa.load(path, sr=22050, mono=True)
+```
+
+#### 선택지 B: 스테레오 통일 (정확도 우선)
+
+**선택 근거**:
+1. 분류 정확도 +2.28%p 개선 (0.8745 → 0.8973)
+2. street_music +9%p, children_playing +4%p, dog_bark +3%p
+3. 모든 분류에서 일관된 개선 (8개 개선, 2개 동일, 0개 악화)
+
+**비용 및 한계**:
+1. 비표준 (학계 비교 어려움)
+2. feature 수 2배 (50 → 104)
+3. 데이터 크기 2배 (약 10MB)
+4. 학습 속도 약 2배 느림
+5. 모노 파일 8.46%의 처리 한계 (좌=우 복제로 "가짜 스테레오")
+6. 02_build_features.py 재작업 필요 (~30분)
+7. 개선 효과 원인 불명확 (스테레오 정보 vs feature 수 증가 구분 불가)
+
+#### 선택지 비교표
+
+| 항목 | 선택지 A: 모노 | 선택지 B: 스테레오 |
+|---|:---:|:---:|
+| 전체 정확도 | 0.8745 | **0.8973** |
+| feature 수 | **50** | 104 |
+| 데이터 크기 | **약 5MB** | 약 10MB |
+| 학습 속도 | **2배 빠름** | 1배 |
+| 학계 표준 | **표준** | 비표준 |
+| 재작업 필요 | **불필요** | 필요 (~30분) |
+
+### 6-2. 변환 방식 결정 (선택지 A의 경우)
+
+모노 통일을 선택한 경우, **librosa.load의 mono=True (단순 평균)에 위임한다.**
 
 ```python
 y, sr = librosa.load(path, sr=22050, mono=True)
 # 스테레오 파일은 자동으로 (L+R)/2로 모노 변환
 ```
 
-### 5-2. 결정 근거 (분석 단계별 종합)
+#### 결정 근거 (분석 단계별 종합)
 
 | 분석 | 검증 내용 | 결과 |
 |---|---|---|
@@ -296,7 +401,7 @@ y, sr = librosa.load(path, sr=22050, mono=True)
 | 3단계 | 4가지 변환 방식 MFCC 비교 | 단순평균이 표준성 1위 (0.9992) |
 | 4단계 | 실제 분류 정확도 검증 | 단순평균이 좌채널 대비 +14.4%p 우수 |
 
-### 5-3. 다른 변환 방식을 쓰지 않는 이유
+#### 다른 변환 방식을 쓰지 않는 이유
 
 | 방식 | 4단계 검증 결과 |
 |---|---|
@@ -305,7 +410,7 @@ y, sr = librosa.load(path, sr=22050, mono=True)
 | 에너지합 | 미검증 |
 | 단순평균 | 모든 분류에서 가장 우수 |
 
-### 5-4. 인지하고 가야 할 사항
+### 6-3. 인지하고 가야 할 사항
 
 **(1) car_horn의 채널 변환 민감성**
 
@@ -328,20 +433,21 @@ SR 분석, 비트 깊이 분석, 채널 분석 모두에서 drilling이 특이 �
 
 비트 깊이 사전 점검에서 drilling 정확도는 0.873으로 평균 수준이었음.
 
-### 5-5. 향후 모델 학습 단계에서 확인할 항목
+### 6-4. 향후 모델 학습 단계에서 확인할 항목
 
 - car_horn 정확도가 사전 점검(0.78)과 본 모델에서 유사한지
 - Fold10 vs Fold7의 cross-validation 결과 변동성
 - drilling 클래스의 본 모델에서의 정확도
+- (선택지 B 선택 시) 스테레오 통일의 효과가 본 모델에서도 +2.28%p 유지되는지
 
 ---
 
-## 6. 분석 환경
+## 7. 분석 환경
 
 | 항목 | 값 |
 |---|---|
 | 사용 라이브러리 | librosa, soundfile, numpy, pandas, matplotlib, scikit-learn |
-| 분석 스크립트 | scripts/01_inspect.py, scripts/analyze_channels_basic.py, scripts/analyze_channels_stereo_diff.py, scripts/analyze_channels_mono_methods.py, scripts/preview_channels_risk.py |
-| 결과 데이터 | outputs/channels_by_class.csv, outputs/channels_by_fold.csv, outputs/stereo_channel_diff_detail.csv, outputs/stereo_channel_diff_summary.csv, outputs/channel_methods_detail.csv, outputs/channel_methods_vs_average.csv, outputs/channel_methods_vs_left.csv, outputs/channel_methods_summary.csv, outputs/channels_risk_preview.csv |
-| 시각화 | outputs/channels_distribution.png, outputs/stereo_channel_diff.png, outputs/channel_methods_comparison.png, outputs/channels_risk_preview.png |
+| 분석 스크립트 | scripts/01_inspect.py, scripts/analyze_channels_basic.py, scripts/analyze_channels_stereo_diff.py, scripts/analyze_channels_mono_methods.py, scripts/preview_channels_risk.py, scripts/preview_mono_vs_stereo.py |
+| 결과 데이터 | outputs/channels_by_class.csv, outputs/channels_by_fold.csv, outputs/stereo_channel_diff_detail.csv, outputs/stereo_channel_diff_summary.csv, outputs/channel_methods_detail.csv, outputs/channel_methods_vs_average.csv, outputs/channel_methods_vs_left.csv, outputs/channel_methods_summary.csv, outputs/channels_risk_preview.csv, outputs/mono_vs_stereo_preview.csv, outputs/stereo_unified_features.csv |
+| 시각화 | outputs/channels_distribution.png, outputs/stereo_channel_diff.png, outputs/channel_methods_comparison.png, outputs/channels_risk_preview.png, outputs/mono_vs_stereo_preview.png |
 | 재현 가능성 | random_state=42 |
