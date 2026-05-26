@@ -1,0 +1,86 @@
+UrbanSound8K original structure summary
+==========================================
+Rows in metadata: 8732
+Existing audio files: 8732
+Missing audio files: 0
+Files with read errors: 0
+
+Class counts:
+class
+air_conditioner     1000
+car_horn             429
+children_playing    1000
+dog_bark            1000
+drilling            1000
+engine_idling       1000
+gun_shot             374
+jackhammer          1000
+siren                929
+street_music        1000
+
+Fold counts:
+fold
+1     873
+2     888
+3     925
+4     990
+5     936
+6     823
+7     838
+8     806
+9     816
+10    837
+
+Sample rate counts:
+sample_rate
+8000        12
+11024        7
+11025       39
+16000       45
+22050       44
+24000       82
+32000        4
+44100     5370
+48000     2502
+96000      610
+192000      17
+
+Channel counts:
+channels
+1     739
+2    7993
+
+Subtype counts:
+subtype
+FLOAT         169
+IMA_ADPCM       1
+MS_ADPCM        8
+PCM_16       5758
+PCM_24       2753
+PCM_U8         43
+
+Actual duration seconds:
+count    8732.000000
+mean        3.607522
+std         0.974394
+min         0.050000
+25%         4.000000
+50%         4.000000
+75%         4.000000
+max         4.036647
+
+Validation checks:
+fsids_crossing_folds             5
+files_from_cross_fold_fsids    152
+filename_parse_errors            0
+missing_wavs                     0
+extra_wavs                       0
+read_errors                      0
+duration_mismatch               13
+
+Audio quality checks:
+quality_rows           8732
+quality_read_errors       0
+files_with_clipping     732
+mostly_silent_files      20
+very_quiet_files        135
