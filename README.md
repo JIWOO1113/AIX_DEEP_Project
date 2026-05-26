@@ -1,4 +1,4 @@
-# Title:  다양한 모델을 활용한 도시 환경 소리의 종류 분류 및 성능 평가
+# 다양한 모델을 활용한 도시 환경 소리의 종류 분류 및 성능 평가
 
 Members: 
 
@@ -51,8 +51,7 @@ Members:
 
 # IV. Evaluation & Analysis
 
-### Train: fold 1-9 <br>
-### Test: fold 10 
+### Train: fold 1-9 / Test: fold 10 
 <br>
 
 ### 평가 항목: 
