@@ -1,9 +1,5 @@
 # UrbanSound8K 음향 분류 — 전처리 종합 정리
 
-UrbanSound8K 데이터셋(8,732개 wav, 10개 클래스)에 대해 6가지 전처리 항목을 검증한 결과를 정리한 문서입니다.
-
-각 항목별 상세 분석은 별도 마크다운에 있습니다.
-
 | 항목 | 상세 분석 |
 |---|---|
 | Sample Rate | [Sample_rate.md](./Sample_rate.md) |
