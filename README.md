@@ -200,6 +200,59 @@ RCNN(Recurrent Convolutional Neural Network)은 spectrogram의 공간적 패턴�
 
 ### 6. Pretrained audio model
 
+## Model Description
+
+AST(Audio Spectrogram Transformer)는 소리를 이미지처럼 다루는 사전학습 모델이다. 오디오를 spectrogram(가로축 시간 × 세로축 주파수의 그림)으로 바꾼 뒤, 이미지 인식에서 쓰이는 Transformer 구조로 분류한다.
+본 프로젝트에서는 Google이 AudioSet(200만 개 이상의 유튜브 오디오, 527개 라벨)으로 미리 학습해둔 `MIT/ast-finetuned-audioset-10-10-0.4593` 모델을 가져와 UrbanSound8K 10개 class에 맞게 재학습하였다.
+
+MLP가 소리의 시간 정보를 평균으로 압축해 버린 것과 달리, AST는 **spectrogram을 시간축까지 통째로 입력**받는다. 즉 "소리가 시간에 따라 어떻게 변하고 반복되는가"를 모델이 직접 본다. 이 차이가 결과에 어떻게 나타나는지는 **IV에서 확인한다.**
+
+사전학습 모델을 활용하는 방식은 두 가지로 나누어 비교하였다.
+
+| 방식 | 본체(Transformer) | classifier head | 학습 대상 | 목적 |
+|---|---|---|---|---|
+| **Feature Extraction (FE)** | 동결(freeze) | 학습 | head만 | AudioSet 사전학습 표현을 그대로 쓸 때의 성능 |
+| **Full Fine-tuning (Full FT)** | 학습 | 학습 | 전체 | UrbanSound8K에 맞춰 모델 전체를 미세조정 |
+
+> **비유.** Feature Extraction은 이미 소리를 잘 듣도록 훈련된 전문가(AST 본체)는 그대로 두고, "이 소리가 10개 중 무엇인지" 판단하는 마지막 판단부(head)만 새로 가르치는 방식이다. Full Fine-tuning은 전문가의 귀까지 우리 데이터에 맞춰 다시 조율하는 방식이다.
+
+AudioSet의 527개 라벨을 UrbanSound8K의 10개 라벨에 직접 대응시키는 Zero-shot 방식은, 라벨 매핑의 주관성이 크고 MLP와의 일관성도 떨어지므로 본 분석에서 제외하였다.
+
+## Input Flow
+
+```
+wav → 16kHz mono → ASTFeatureExtractor → spectrogram (1024 frame × 128 mel) → AST → 10개 class
+```
+
+- AST는 16kHz mono 입력을 요구한다 (MLP의 22,050Hz와 다름)
+- `ASTFeatureExtractor`가 길이 보정(1024 frame zero-padding)과 AudioSet 통계 기반 정규화를 자동 처리한다
+- classifier head는 사전학습 모델의 527-class 분류층을 떼어내고 `LayerNorm(768) → Linear(768 → 10)`으로 교체
+
+## Hyperparameters
+
+| 항목 | Feature Extraction | Full Fine-tuning |
+|---|---|---|
+| 학습 대상 | head (LayerNorm + Linear) | 전체 모델 |
+| Optimizer | AdamW | AdamW |
+| Learning Rate | 1e-3 | 1e-5 |
+| Batch Size | 전체 batch (7,079) | 16 |
+| Max Epochs | 50 | 5 |
+| Early Stopping | best val 저장 | patience=2 |
+| Loss | CrossEntropyLoss | CrossEntropyLoss |
+| Random Seed | 42 | 42 |
+| Device | T4 GPU (CUDA) | T4 GPU (CUDA) |
+
+## Evaluation Setup
+
+| 항목 | 설정 |
+|---|---|
+| Train | fold 1–8 (7,079개) |
+| Validation | fold 9 (816개) |
+| Test | fold 10 (837개) |
+| 코드 | `models/AST/ast_model.py` |
+| checkpoint (FE) | `models/AST/ast_fe_best.pt` (head만, 약 39KB) |
+| checkpoint (Full FT) | 약 329MB로 GitHub 100MB 제한 초과 → 저장소 미포함 |
+
 ---
 
 # IV. Evaluation & Analysis
@@ -482,6 +535,130 @@ RCNN(Recurrent Convolutional Neural Network)은 spectrogram의 공간적 패턴�
 - 상세 해석 파일: `rcnn_feature_results.md`
 
 ### 6. Pretrained audio model
+
+AST는 두 가지 방식(Feature Extraction, Full Fine-tuning)으로 학습하여 비교하였다. 흐름은 각 방식의 **결과 → 관찰 → 해석 → 두 방식 비교 → 결론** 순이다.
+
+---
+
+## 6-1. Feature Extraction (FE)
+
+### Overall Performance
+
+| Metric | Score |
+|---|---:|
+| Accuracy | 0.8829 |
+| Balanced Accuracy | 0.8861 |
+| Macro Precision | 0.9006 |
+| Macro Recall | 0.8861 |
+| Macro F1 | 0.8903 |
+| Weighted Precision | 0.8881 |
+| Weighted Recall | 0.8829 |
+| Weighted F1 | 0.8824 |
+| Best Val Accuracy | 0.8750 |
+
+### Per-Class Performance (F1 내림차순)
+
+| Class | Precision | Recall | F1-score | Support |
+|---|---:|---:|---:|---:|
+| jackhammer | 0.9895 | 0.9792 | 0.9843 | 96 |
+| gun_shot | 1.0000 | 0.9688 | 0.9841 | 32 |
+| engine_idling | 0.9158 | 0.9355 | 0.9255 | 93 |
+| drilling | 0.9468 | 0.8900 | 0.9175 | 100 |
+| car_horn | 0.9355 | 0.8788 | 0.9062 | 33 |
+| street_music | 0.8911 | 0.9000 | 0.8955 | 100 |
+| children_playing | 0.8099 | 0.9800 | 0.8869 | 100 |
+| dog_bark | 0.8286 | 0.8700 | 0.8488 | 100 |
+| siren | 0.9508 | 0.6988 | 0.8056 | 83 |
+| air_conditioner | 0.7379 | 0.7600 | 0.7488 | 100 |
+
+### Confusion Matrix
+
+![AST Feature Extraction Confusion Matrix](images/ast_feature_ext_confusion.png)
+
+### Major Confusions (5건 이상)
+
+| 실제 class | 주된 오분류 | 건수 |
+|---|---|---:|
+| siren | dog_bark | 14 |
+| air_conditioner | children_playing | 12 |
+| drilling | street_music | 7 |
+| siren | air_conditioner | 7 |
+| air_conditioner | engine_idling | 6 |
+| dog_bark | air_conditioner | 6 |
+| engine_idling | air_conditioner | 6 |
+| street_music | children_playing | 5 |
+
+**관찰.** AST 본체를 동결하고 head만 학습했음에도 Test Accuracy 0.8829, Macro F1 0.8903을 기록했다. `jackhammer`(F1 0.9843)와 `gun_shot`(0.9841)이 최상위이며, 기계음 계열(`jackhammer`·`drilling`·`engine_idling`)이 모두 0.92 이상으로 잘 분리된다. 반면 `siren`은 precision 0.9508로 높지만 recall 0.6988로 낮아, 실제 siren의 약 30%를 다른 class(주로 `dog_bark` 14건)로 놓쳤다. `air_conditioner`는 `children_playing`·`engine_idling` 등으로 분산 오분류되어 가장 낮은 F1(0.7488)을 보였다.
+
+---
+
+## 6-2. Full Fine-tuning (Full FT)
+
+### Overall Performance
+
+| Metric | Score |
+|---|---:|
+| Accuracy | 0.8901 |
+| Balanced Accuracy | 0.8999 |
+| Macro Precision | 0.9102 |
+| Macro Recall | 0.8999 |
+| Macro F1 | 0.8993 |
+| Weighted Precision | 0.9001 |
+| Weighted Recall | 0.8901 |
+| Weighted F1 | 0.8890 |
+| Best Val Accuracy | 0.9007 (epoch 3) |
+| 종료 Epoch | 5 (Early Stopping, patience=2) |
+
+### Per-Class Performance (F1 내림차순)
+
+| Class | Precision | Recall | F1-score | Support |
+|---|---:|---:|---:|---:|
+| gun_shot | 1.0000 | 1.0000 | 1.0000 | 32 |
+| jackhammer | 0.9600 | 1.0000 | 0.9796 | 96 |
+| car_horn | 0.9143 | 0.9697 | 0.9412 | 33 |
+| engine_idling | 0.9556 | 0.9247 | 0.9399 | 93 |
+| street_music | 0.8857 | 0.9300 | 0.9073 | 100 |
+| drilling | 0.9767 | 0.8400 | 0.9032 | 100 |
+| children_playing | 0.8151 | 0.9700 | 0.8858 | 100 |
+| dog_bark | 0.7500 | 0.9300 | 0.8304 | 100 |
+| siren | 1.0000 | 0.6747 | 0.8058 | 83 |
+| air_conditioner | 0.8444 | 0.7600 | 0.8000 | 100 |
+
+### Confusion Matrix
+
+![AST Full Fine-tuning Confusion Matrix](images/ast_full_ft_confusion.png)
+
+### Major Confusions (5건 이상)
+
+| 실제 class | 주된 오분류 | 건수 |
+|---|---|---:|
+| siren | dog_bark | 22 |
+| drilling | street_music | 9 |
+| air_conditioner | children_playing | 9 |
+| air_conditioner | dog_bark | 7 |
+| engine_idling | air_conditioner | 7 |
+| street_music | children_playing | 6 |
+
+**관찰.** 전체 모델을 미세조정한 결과 Accuracy 0.8901, Macro F1 0.8993으로 FE보다 소폭 상승했다. `gun_shot`은 완벽 분류(F1 1.0000), `jackhammer`도 recall 1.0000을 달성했다. 다만 `siren → dog_bark` 혼동은 14건에서 **22건으로 오히려 늘었고**, `siren`의 recall은 0.6747로 FE보다 낮아졌다.
+
+**과적합 신호.** 학습 곡선에서 train loss는 epoch 1의 0.28에서 epoch 5의 0.007로 급격히 떨어진 반면, validation loss는 0.47에서 0.70으로 **상승**했다. val accuracy도 epoch 3(0.9007)에서 최고를 찍고 이후 하락했다. train만 잘 맞추고 새 데이터 일반화는 나빠지는 전형적인 과적합 양상이다.
+
+---
+
+## 6-3. 두 방식 비교 및 결론
+
+| 지표 | Feature Extraction | Full Fine-tuning | 차이 |
+|---|---:|---:|---:|
+| Accuracy | 0.8829 | 0.8901 | +0.0072 |
+| Balanced Accuracy | 0.8861 | 0.8999 | +0.0138 |
+| Macro F1 | 0.8903 | 0.8993 | +0.0090 |
+| Weighted F1 | 0.8824 | 0.8890 | +0.0066 |
+
+**해석.** Full Fine-tuning은 FE 대비 모든 지표에서 +0.7~1.4%p 향상에 그쳤다. 전체 모델을 학습하느라 계산 비용은 훨씬 크지만, 학습 곡선은 과적합을 보였고, `siren → dog_bark` 같은 핵심 혼동은 오히려 악화되었다. 즉 데이터 규모(약 8,700개)가 크지 않은 환경에서는, 본체를 동결한 FE만으로도 사전학습 표현의 이점을 충분히 끌어낼 수 있다.
+
+한편 `siren`이 `dog_bark`로 흘러가는 혼동은 FE·Full FT 양쪽에서 가장 두드러지며, 학습 방식을 바꿔도 사라지지 않았다. 이는 모델의 한계라기보다 **두 소리가 음향적으로 겹치는 데이터 자체의 모호성**으로 볼 수 있다.
+
+> AST는 spectrogram의 시간 정보를 보존하여, 반복 패턴이 핵심인 기계음(`jackhammer`·`drilling` 등)을 정확히 구별한다. 다만 `siren`과 `dog_bark`처럼 소리 자체가 겹치는 class는 모델이나 학습 방식을 바꿔도 풀리지 않는다. 그리고 데이터가 충분치 않을 때는, 모델 전체를 미세조정(Full FT)하기보다 본체를 동결한 Feature Extraction만으로도 충분하다.
 
 ### 7. 최종 비교 분석
 
