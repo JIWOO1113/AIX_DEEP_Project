@@ -1,35 +1,39 @@
 # 다양한 모델을 활용한 도시 환경 소리의 종류 분류 및 성능 평가
 
 Members: 
+    2020064320 백연지
+    2021013790 박지우
+    2023021494 성신예
+    2024024139 박사라
 
 # I. Proposal (Option A)
-
+[TODO]
 # II. Datasets
-
+[TODO]
 # III. Methodology
-
+[TODO]
 ## III-I. 데이터 전처리
 
 ### Sample Rate: 22050 Hz
-1. 전체 통계
-2. 22050 Hz로 판단한 근거.
+1. [TODO] 조사한 전체 통계
+2. [TODO] 22050 Hz로 판단한 근거.(데이터 손실률 사진)
 
 ### Channels: Mono
-1. 전체 통계
-2. Mono로 판단한 근거(양쪽에서 들리는 소리 차이가 없음)
+1. [TODO] 전체 통계
+2. [TODO] Mono로 판단한 근거(양쪽에서 들리는 소리 차이가 없음)
 
 ### Bit Depth: 32-float point
-1. 전체 통계
-2. float로 판단한 근거(정보 손실이 없다.)
+1. [TODO] 전체 통계
+2. [TODO] float로 판단한 근거(정보 손실이 없다.)
 
 ### Duration: 4초, repeat padding
-1. 전체 통계
-2. repeat padding의 근거
+1. [TODO] 전체 통계
+2. [TODO] repeat padding의 근거
 
 ### Noramlization: 
-1. MFCC + SVM / RandomForest / XGBoost </br> 
+1. [TODO] MFCC + SVM / RandomForest / XGBoost </br> 
     MFCC나 log-mel 통계 feature를 뽑은 뒤, train fold 기준으로 feature standardization
-2. 2D CNN / CRNN용 log-mel spectrogram </br> 
+2. [TODO] 2D CNN / CRNN용 log-mel spectrogram </br> 
     log-mel spectrogram을 만든 뒤, train set 전체의 mean/std로 정규화
 
 ---
