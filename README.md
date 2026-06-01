@@ -36,23 +36,34 @@ Members:
 ## III-II 모델 
 
 ### 1. XGboost 
-Model Description
-XGBoost는 Gradient Boosting 기반의 앙상블 학습 알고리즘으로, 여러 개의 결정트리(Decision Tree)를 순차적으로 학습하여 예측 성능을 향상시킨다. 과적합 방지 기능과 높은 학습 효율성을 제공하며, 다양한 머신러닝 문제에서 우수한 성능을 보이는 모델이다. 본 프로젝트에서는 다중 클래스 환경음 분류(Multi-class Sound Classification)에 활용하였다.
-Hyperparameters
-Number of Trees (n_estimators): 300
-Max Depth: 5
-Learning Rate: 0.05
-Subsample: 0.8
-Colsample Bytree: 0.8
-Objective: multi:softmax
-Number of Classes: 10
-Evaluation Metric: mlogloss
-Random State: 42
-Features Used
-MFCC (Mel-Frequency Cepstral Coefficients)
-40개의 MFCC 계수 추출
-각 계수의 평균(mean)과 표준편차(std) 계산
-총 Feature 수: 80개
+## Model Description
+
+XGBoost는 Gradient Boosting 기반의 앙상블 학습 알고리즘으로, 여러 개의 결정트리(Decision Tree)를 순차적으로 학습하여 예측 성능을 향상시킨다.
+
+과적합 방지 기능과 높은 학습 효율성을 제공하며, 다양한 머신러닝 문제에서 우수한 성능을 보이는 모델이다.
+
+본 프로젝트에서는 다중 클래스 환경음 분류(Multi-class Sound Classification)에 활용하였다.
+
+## Hyperparameters
+
+- Number of Trees (n_estimators): 300
+- Max Depth: 5
+- Learning Rate: 0.05
+- Subsample: 0.8
+- Colsample Bytree: 0.8
+- Objective: multi:softmax
+- Number of Classes: 10
+- Evaluation Metric: mlogloss
+- Random State: 42
+
+## Features Used
+
+- MFCC (Mel-Frequency Cepstral Coefficients)
+- 40개의 MFCC 계수 추출
+- 각 계수의 평균(mean)과 표준편차(std) 계산
+- 총 Feature 수: 80개
+
+```text
 40 MFCC means
 + 40 MFCC standard deviations
 = 80-dimensional feature vector
