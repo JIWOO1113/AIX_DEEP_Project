@@ -96,6 +96,55 @@ SVM은 고차원 특징 공간에서 클래스 간 경계를 효과적으로 학
 
 ### 5. RCNN
 
+## Model Description
+
+RCNN(Recurrent Convolutional Neural Network)은 spectrogram의 공간적 패턴과 시간적 흐름을 함께 학습하는 모델이다.  
+본 프로젝트에서는 log-mel spectrogram을 CNN으로 먼저 압축한 뒤, Bi-GRU로 시간 축의 앞뒤 문맥을 학습하도록 구성하였다.
+
+| 구성 | 내용 |
+|---|---|
+| 입력 | log-mel spectrogram `(1, 128, 173)` |
+| CNN | ConvBlock 4개, freq-axis MaxPool 3회 |
+| RNN | 2-layer Bidirectional GRU |
+| Pooling | time-axis mean pooling + max pooling |
+| Classifier | LayerNorm + Dropout + Linear |
+| 출력 | 10개 class logits |
+| 코드 | `models/rcnn/rcnn.py` |
+| checkpoint | `models/rcnn/best_rcnn.pt` |
+
+## Hyperparameters
+
+| 항목 | 내용 |
+|---|---|
+| Sample Rate | 22050 Hz |
+| Duration | 4.0 sec |
+| Padding | repeat |
+| n_mels | 128 |
+| n_fft | 1024 |
+| hop_length | 512 |
+| top_db | 80 |
+| Hidden Size | 128 |
+| RNN Layers | 2 |
+| Dropout | 0.3 |
+| Epochs | 60 |
+| Batch Size | 32 |
+| Learning Rate | 0.001 |
+| Weight Decay | 0.0001 |
+| Gradient Clipping | 5.0 |
+| Early Stopping Patience | 10 |
+| Optimizer | AdamW |
+| Loss | CrossEntropyLoss + class weight |
+| Scheduler | ReduceLROnPlateau |
+| Best Model 기준 | validation macro F1 |
+
+## Features Used
+
+- 22050Hz mono audio를 4초 길이로 고정
+- 짧은 audio는 repeat padding 적용
+- log-mel spectrogram 추출
+- train split 기준 mean/std로 정규화
+- Train: fold 1-8 / Validation: fold 9 / Test: fold 10
+
 ### 6. Pretrained audio model
 
 ---
@@ -246,6 +295,69 @@ SVM은 고차원 특징 공간에서 클래스 간 경계를 효과적으로 학
 ### 4. 2D CNN
 
 ### 5. RCNN
+
+## Overall Performance
+
+| Metric | Score |
+|---|---:|
+| Test Loss | 1.0044 |
+| Accuracy | 0.7706 |
+| Balanced Accuracy | 0.7957 |
+| Macro Precision | 0.8103 |
+| Macro Recall | 0.7957 |
+| Macro F1 | 0.7932 |
+| Weighted Precision | 0.7877 |
+| Weighted Recall | 0.7706 |
+| Weighted F1 | 0.7678 |
+
+## Per-Class Performance
+
+| Class | Precision | Recall | F1-score | Support |
+|---|---:|---:|---:|---:|
+| air_conditioner | 0.7347 | 0.7200 | 0.7273 | 100 |
+| car_horn | 0.9688 | 0.9394 | 0.9538 | 33 |
+| children_playing | 0.6916 | 0.7400 | 0.7150 | 100 |
+| dog_bark | 0.8632 | 0.8200 | 0.8410 | 100 |
+| drilling | 0.9839 | 0.6100 | 0.7531 | 100 |
+| engine_idling | 0.7826 | 0.5806 | 0.6667 | 93 |
+| gun_shot | 0.9697 | 1.0000 | 0.9846 | 32 |
+| jackhammer | 0.6761 | 1.0000 | 0.8067 | 96 |
+| siren | 0.7037 | 0.6867 | 0.6951 | 83 |
+| street_music | 0.7288 | 0.8600 | 0.7890 | 100 |
+
+## Confusion Matrix
+
+![RCNN Confusion Matrix](images/rcnn_confusion_matrix.png)
+
+| Actual \ Predicted | air_conditioner | car_horn | children_playing | dog_bark | drilling | engine_idling | gun_shot | jackhammer | siren | street_music |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| air_conditioner | 72 | 0 | 0 | 0 | 1 | 4 | 0 | 14 | 4 | 5 |
+| car_horn | 0 | 31 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 |
+| children_playing | 0 | 0 | 74 | 7 | 0 | 5 | 0 | 0 | 9 | 5 |
+| dog_bark | 1 | 1 | 7 | 82 | 0 | 1 | 1 | 0 | 0 | 7 |
+| drilling | 0 | 0 | 0 | 0 | 61 | 5 | 0 | 28 | 6 | 0 |
+| engine_idling | 24 | 0 | 7 | 0 | 0 | 54 | 0 | 3 | 3 | 2 |
+| gun_shot | 0 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 | 0 |
+| jackhammer | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 96 | 0 | 0 |
+| siren | 1 | 0 | 8 | 6 | 0 | 0 | 0 | 0 | 57 | 11 |
+| street_music | 0 | 0 | 11 | 0 | 0 | 0 | 0 | 1 | 2 | 86 |
+
+## Major Confusions
+
+| 실제 class | 주된 오분류 | 건수 |
+|---|---|---:|
+| drilling | jackhammer | 28 |
+| engine_idling | air_conditioner | 24 |
+| air_conditioner | jackhammer | 14 |
+| siren | street_music | 11 |
+| street_music | children_playing | 11 |
+
+### Result Analysis
+
+- 강점: `gun_shot`, `car_horn`, `dog_bark`
+- 약점: `engine_idling`, `siren`, `children_playing`
+- 주요 혼동: `drilling → jackhammer`, `engine_idling → air_conditioner`
+- 상세 해석 파일: `rcnn_feature_results.md`
 
 ### 6. Pretrained audio model
 
