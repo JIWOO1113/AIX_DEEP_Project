@@ -39,9 +39,7 @@ Members:
 ## Model Description
 
 XGBoost는 Gradient Boosting 기반의 앙상블 학습 알고리즘으로, 여러 개의 결정트리(Decision Tree)를 순차적으로 학습하여 예측 성능을 향상시킨다.
-
 과적합 방지 기능과 높은 학습 효율성을 제공하며, 다양한 머신러닝 문제에서 우수한 성능을 보이는 모델이다.
-
 본 프로젝트에서는 다중 클래스 환경음 분류(Multi-class Sound Classification)에 활용하였다.
 
 ## Hyperparameters
@@ -67,22 +65,31 @@ XGBoost는 Gradient Boosting 기반의 앙상블 학습 알고리즘으로, 여�
 
 
 ### 2. SVM
-Model Description
-SVM(Support Vector Machine)은 초평면(hyperplane)을 이용하여 서로 다른 클래스를 분류하는 지도학습 알고리즘이다. 본 프로젝트에서는 비선형 데이터 분류를 위해 RBF(Radial Basis Function) 커널을 사용하였다. SVM은 고차원 특징 공간에서 클래스 간 경계를 효과적으로 학습할 수 있으며, 비교적 적은 데이터에서도 안정적인 성능을 보이는 장점이 있다.
-Hyperparameters
-Kernel: RBF
-C: 10
-Gamma: scale
-Class Weight: balanced
-Random State: 42
-Features Used
-MFCC (Mel-Frequency Cepstral Coefficients)
-40개의 MFCC 계수 추출
-각 계수의 평균(mean)과 표준편차(std) 계산
-총 Feature 수: 80개
-40 MFCC means
-+ 40 MFCC standard deviations
-= 80-dimensional feature vector
+# 2. SVM
+
+## Model Description
+
+SVM(Support Vector Machine)은 초평면(hyperplane)을 이용하여 서로 다른 클래스를 분류하는 지도학습 알고리즘이다.
+본 프로젝트에서는 비선형 데이터 분류를 위해 RBF(Radial Basis Function) 커널을 사용하였다.
+SVM은 고차원 특징 공간에서 클래스 간 경계를 효과적으로 학습할 수 있으며, 비교적 적은 데이터에서도 안정적인 성능을 보이는 장점이 있다.
+
+## Hyperparameters
+
+- Kernel: RBF
+- C: 10
+- Gamma: scale
+- Class Weight: balanced
+- Random State: 42
+
+## Features Used
+
+- MFCC (Mel-Frequency Cepstral Coefficients)
+- 40개의 MFCC 계수 추출
+- 각 계수의 평균(mean) 계산
+- 각 계수의 표준편차(std) 계산
+- 총 Feature 수: 80개
+  - 40 MFCC means
+  - 40 MFCC standard deviations
 
 ### 3. MLP
 
