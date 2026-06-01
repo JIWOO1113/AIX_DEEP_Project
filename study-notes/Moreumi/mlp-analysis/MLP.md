@@ -79,6 +79,25 @@ mean (128차원) + std (128차원)
 | **1차-B** | fold 1~8 | fold 9 | fold 10 | 팀 결정 (Val=fold9) |
 | **2차** | 각 회차 8 folds | 각 회차 1 fold | 각 회차 1 fold | 10-fold CV (일반화 검증) |
 
+### 1-7. 평가 지표 (팀 합의 12개 항목)
+
+본 프로젝트는 모든 모델에 대해 동일한 12개 평가 항목을 사용한다. UrbanSound8K는 클래스 불균형(gun_shot 374, car_horn 429 vs 나머지 ~1000)이 있으므로, accuracy 단일 지표가 아닌 balanced accuracy와 macro 평균 지표를 함께 본다.
+
+| 통계값 | 설명 |
+| --- | --- |
+| accuracy | 전체 sample 중 모델이 정답을 맞힌 비율 |
+| balanced accuracy | class별 recall을 평균낸 값. class imbalance가 있을 때 accuracy보다 공정하게 볼 수 있음 |
+| macro precision | class별 precision을 단순 평균한 값. 모든 class를 같은 비중으로 반영 |
+| macro recall | class별 recall을 단순 평균한 값. 작은 class의 탐지 성능까지 반영 |
+| macro F1 | class별 F1을 단순 평균한 값. class imbalance가 있는 모델 비교에서 핵심 지표로 사용 |
+| weighted precision | class별 precision을 sample 수에 따라 가중 평균한 값 |
+| weighted recall | class별 recall을 sample 수에 따라 가중 평균한 값 |
+| weighted F1 | class별 F1을 sample 수에 따라 가중 평균한 값. 실제 데이터 분포 기준 성능을 반영 |
+| class별 precision | 특정 class라고 예측한 sample 중 실제로 그 class인 비율. 오탐이 많은지 확인 |
+| class별 recall | 실제 특정 class sample 중 모델이 제대로 맞힌 비율. 미탐이 많은지 확인 |
+| class별 F1 | class별 precision과 recall의 조화평균. 각 class의 종합 성능 확인 |
+| confusion matrix | 실제 class와 예측 class의 대응표. 어떤 class끼리 헷갈리는지 확인 |
+
 ---
 
 ## 2. Validation 사용 여부 비교 (1차-A vs 1차-B)
@@ -97,14 +116,20 @@ mean (128차원) + std (128차원)
 
 ### 2-2. 객관적 결과
 
-#### 전체 정확도
+#### 전체 성능 (12개 지표)
 
-| 분석 | Test Accuracy | Macro F1 | Train 종료 Epoch |
+| 지표 | 1차-A (Val 없음) | 1차-B (Val=fold9) | 차이 |
 | --- | --- | --- | --- |
-| 1차-A (Val 없음) | 0.6284 | 0.6462 | 100 |
-| 1차-B (Val=fold9) | 0.6858 | 0.7045 | 45 (early stop) |
+| accuracy | 0.6284 | 0.6858 | +0.0574 |
+| balanced accuracy | 0.6496 | 0.6988 | +0.0492 |
+| macro precision | 0.6581 | 0.7223 | +0.0642 |
+| macro recall | 0.6496 | 0.6988 | +0.0492 |
+| macro F1 | 0.6462 | 0.7045 | +0.0583 |
+| weighted precision | 0.6428 | 0.7004 | +0.0576 |
+| weighted recall | 0.6284 | 0.6858 | +0.0574 |
+| weighted F1 | 0.6276 | 0.6868 | +0.0592 |
 
-**정확도 차이: +5.74%p (1차-B 우세)**
+**정확도 차이: +5.74%p (1차-B 우세)**. 8개 종합 지표 모두에서 1차-B가 높다.
 
 #### 학습 곡선 비교
 
@@ -156,6 +181,7 @@ mean (128차원) + std (128차원)
 ### 2-4. 얻은 정보
 
 - Validation 사용 여부에 따라 동일 Train/Test 조건에서도 전체 정확도가 5.74%p 차이가 발생
+- balanced accuracy, macro/weighted 지표 모두 1차-B가 일관되게 높음
 - 학습 곡선상 1차-A는 Train loss가 계속 감소하는 반면 1차-B의 Val loss는 학습 중반 이후 다시 증가하는 패턴 관찰
 - 클래스별로 변동 방향이 다름 (개선/악화/변화 없음 모두 존재)
 
@@ -167,12 +193,18 @@ mean (128차원) + std (128차원)
 
 1차-B는 팀이 최종 채택한 분석 방식이다. Train fold 1~8로 학습, Val fold 9로 학습 중 모니터링 (Early Stopping), Test fold 10으로 최종 평가.
 
-### 3-2. 전체 성능
+### 3-2. 전체 성능 (12개 지표)
 
 | 지표 | 값 |
 | --- | --- |
-| Test Accuracy | 0.6858 |
-| Test Macro F1 | 0.7045 |
+| accuracy | 0.6858 |
+| balanced accuracy | 0.6988 |
+| macro precision | 0.7223 |
+| macro recall | 0.6988 |
+| macro F1 | 0.7045 |
+| weighted precision | 0.7004 |
+| weighted recall | 0.6858 |
+| weighted F1 | 0.6868 |
 | Test Loss | 1.2745 |
 | Best Val Accuracy | 0.6789 |
 | 종료 Epoch | 45 (Early Stopping) |
@@ -181,20 +213,20 @@ mean (128차원) + std (128차원)
 - Train 데이터 수: 7,079개 (fold 1~8)
 - Validation 데이터 수: 816개 (fold 9)
 
-### 3-3. 클래스별 정확도
+### 3-3. 클래스별 성능 (F1 정확도순 정렬)
 
-| 클래스 | n | 정확도 |
-| --- | --- | --- |
-| gun_shot | 32 | 0.8125 |
-| street_music | 100 | 0.7900 |
-| car_horn | 33 | 0.7879 |
-| air_conditioner | 100 | 0.7800 |
-| children_playing | 100 | 0.7500 |
-| engine_idling | 93 | 0.6882 |
-| jackhammer | 96 | 0.6771 |
-| dog_bark | 100 | 0.6500 |
-| siren | 83 | 0.5422 |
-| drilling | 100 | 0.5100 |
+| 클래스 | precision | recall | F1-score | n |
+| --- | --- | --- | --- | --- |
+| car_horn | 0.9630 | 0.7879 | 0.8667 | 33 |
+| gun_shot | 0.7647 | 0.8125 | 0.7879 | 32 |
+| street_music | 0.7670 | 0.7900 | 0.7783 | 100 |
+| engine_idling | 0.8533 | 0.6882 | 0.7619 | 93 |
+| air_conditioner | 0.6903 | 0.7800 | 0.7324 | 100 |
+| dog_bark | 0.7927 | 0.6500 | 0.7143 | 100 |
+| jackhammer | 0.5804 | 0.6771 | 0.6250 | 96 |
+| children_playing | 0.5357 | 0.7500 | 0.6250 | 100 |
+| siren | 0.6618 | 0.5422 | 0.5960 | 83 |
+| drilling | 0.6145 | 0.5100 | 0.5574 | 100 |
 
 ### 3-4. Confusion Matrix
 
@@ -219,11 +251,16 @@ mean (128차원) + std (128차원)
 
 ### 3-5. 결과 해석
 
-#### 클래스 성능 순위
+#### 클래스 성능 순위 (F1 기준)
 
-- 정확도 최고: gun_shot (0.81), street_music (0.79), car_horn (0.79), air_conditioner (0.78)
-- 정확도 중간: children_playing (0.75), engine_idling (0.69), jackhammer (0.68), dog_bark (0.65)
-- 정확도 최저: siren (0.54), drilling (0.51)
+- F1 최고: car_horn (0.867), gun_shot (0.788), street_music (0.778)
+- F1 중간: engine_idling (0.762), air_conditioner (0.732), dog_bark (0.714)
+- F1 최저: jackhammer (0.625), children_playing (0.625), siren (0.596), drilling (0.557)
+
+#### precision-recall 불균형
+
+- car_horn은 precision 0.963 / recall 0.788로, 예측의 정확도는 높으나 일부를 놓침
+- children_playing은 precision 0.536 / recall 0.750으로, 다른 클래스를 children_playing으로 잘못 예측하는 경향 (낮은 precision)
 
 #### 주요 혼동 그룹
 
@@ -235,8 +272,8 @@ mean (128차원) + std (128차원)
 
 ### 3-6. 얻은 정보
 
-- 본 모델은 gun_shot, street_music, car_horn 같은 특징적 신호를 잘 분류 (0.78 이상)
-- drilling과 siren에서 가장 낮은 정확도 (0.51, 0.54)
+- car_horn, gun_shot, street_music이 F1 기준 상위 (0.78 이상)
+- drilling과 siren에서 가장 낮은 F1 (0.557, 0.596)
 - jackhammer와 drilling은 양방향으로 서로 혼동 (각 18번)
 - siren은 children_playing으로 잘못 예측되는 경우가 가장 많음 (20번)
 
@@ -270,22 +307,39 @@ mean (128차원) + std (128차원)
 - 최저: fold 1 (0.5452)
 - 최고-최저 차이: 18.98%p
 
-### 4-3. 클래스별 정확도 (전체 8,732개 합계 기준)
+### 4-3. 전체 성능 (10-fold 통합 예측 기준, 12개 지표)
 
-| 클래스 | n | 정확도 |
-| --- | --- | --- |
-| gun_shot | 374 | 0.9251 |
-| dog_bark | 1000 | 0.7200 |
-| car_horn | 429 | 0.7249 |
-| street_music | 1000 | 0.6910 |
-| siren | 929 | 0.6846 |
-| children_playing | 1000 | 0.6120 |
-| drilling | 1000 | 0.6070 |
-| engine_idling | 1000 | 0.6060 |
-| jackhammer | 1000 | 0.5150 |
-| air_conditioner | 1000 | 0.5080 |
+10개 fold의 예측을 모두 합쳐(전체 8,732개) 계산한 종합 지표:
 
-### 4-4. Confusion Matrix (10-fold CV 합계)
+| 지표 | 값 |
+| --- | --- |
+| accuracy | 0.6358 |
+| balanced accuracy | 0.6594 |
+| macro precision | 0.6585 |
+| macro recall | 0.6594 |
+| macro F1 | 0.6575 |
+| weighted precision | 0.6355 |
+| weighted recall | 0.6358 |
+| weighted F1 | 0.6346 |
+
+(fold별 평균 macro F1은 0.6514, 전체 통합 예측 기준 macro F1은 0.6575로, 집계 방식 차이에 따라 소폭 다름)
+
+### 4-4. 클래스별 성능 (전체 8,732개 합계 기준, F1 정확도순 정렬)
+
+| 클래스 | precision | recall | F1-score | n |
+| --- | --- | --- | --- | --- |
+| gun_shot | 0.8047 | 0.9251 | 0.8607 | 374 |
+| car_horn | 0.8497 | 0.7249 | 0.7824 | 429 |
+| dog_bark | 0.6780 | 0.7200 | 0.6984 | 1000 |
+| siren | 0.6646 | 0.6846 | 0.6744 | 929 |
+| street_music | 0.6525 | 0.6910 | 0.6712 | 1000 |
+| engine_idling | 0.6426 | 0.6060 | 0.6238 | 1000 |
+| drilling | 0.6389 | 0.6070 | 0.6226 | 1000 |
+| children_playing | 0.5528 | 0.6120 | 0.5809 | 1000 |
+| air_conditioner | 0.5558 | 0.5080 | 0.5308 | 1000 |
+| jackhammer | 0.5456 | 0.5150 | 0.5298 | 1000 |
+
+### 4-5. Confusion Matrix (10-fold CV 합계)
 
 ![2차 Confusion Matrix](https://github.com/JIWOO1113/AIX_DEEP_Project/raw/main/study-notes/Moreumi/mlp-analysis/mlp_v2_confusion.png)
 
@@ -302,7 +356,7 @@ mean (128차원) + std (128차원)
 | air_conditioner | jackhammer | 102 |
 | engine_idling | jackhammer | 101 |
 
-### 4-5. 결과 해석
+### 4-6. 결과 해석
 
 #### 전체 성능
 
@@ -310,12 +364,13 @@ mean (128차원) + std (128차원)
 - Fold별 정확도 범위 0.545 ~ 0.735 (18.98%p 변동)
 - Fold 1, 3, 6이 평균보다 낮음 (0.545, 0.572, 0.577)
 - Fold 5가 가장 높음 (0.735)
+- balanced accuracy(0.6594)가 accuracy(0.6358)보다 약간 높음 — 클래스 불균형 상황에서 소수 클래스(gun_shot 등)의 recall이 평균을 끌어올림
 
 #### 클래스별 강점
 
-- gun_shot이 0.9251로 가장 높음 (전체 374개 중 346개 정답)
-- car_horn, dog_bark는 0.72 수준
-- air_conditioner, jackhammer는 0.50 수준에서 정체
+- gun_shot이 F1 0.8607로 가장 높음 (recall 0.9251)
+- car_horn, dog_bark는 F1 0.70~0.78 수준
+- air_conditioner, jackhammer는 F1 0.53 수준에서 정체
 
 #### 주요 혼동 그룹
 
@@ -323,11 +378,11 @@ mean (128차원) + std (128차원)
 2. **인간 활동 혼동**: street_music ↔ children_playing (134건)
 3. **소리 패턴 유사**: siren → dog_bark (132건)
 
-### 4-6. 얻은 정보
+### 4-7. 얻은 정보
 
 - Fold별 정확도 표준편차 0.058 (변동성 큼)
 - 전체 평균 0.6359는 1차-B의 0.6858보다 5%p 낮음
-- gun_shot은 모든 fold에서 일관되게 높은 정확도 (0.9251)
+- gun_shot은 모든 fold에서 일관되게 높은 정확도 (F1 0.8607)
 - 기계음 4종(air_conditioner, engine_idling, jackhammer, drilling)이 서로 가장 빈번하게 혼동
 
 ---
@@ -338,14 +393,14 @@ mean (128차원) + std (128차원)
 
 이전 전처리 분석들(SR, Bit Depth, Channels, Duration, Loudness)에서 식별된 클래스별 특성과 본 MLP 모델 결과의 일치 여부:
 
-| 클래스 | 사전 인지 사항 | MLP 2차 정확도 | 일치 여부 |
+| 클래스 | 사전 인지 사항 | MLP 2차 F1 | 일치 여부 |
 | --- | --- | --- | --- |
-| gun_shot | 클리핑 62%, 짧은 폭발음, 정확도 높음 | 0.925 (최고) | 일치 |
-| drilling | 모든 분석에서 일관 식별, 광대역 신호 | 0.607 (중하위) | 일치 (어려운 클래스) |
-| jackhammer | 반복적 타격, 0.5 수준 | 0.515 (하위) | 일치 |
-| car_horn | 최저 정확도, 변환에 민감 | 0.725 (중상위) | 불일치 (예상보다 높음) |
-| children_playing | 평균 Peak 0.27, 가장 조용 | 0.612 (중위) | 변동 |
-| air_conditioner | 평균 Peak 0.30, 조용한 환경음 | 0.508 (최하위) | 변동 |
+| gun_shot | 클리핑 62%, 짧은 폭발음, 정확도 높음 | 0.861 (최고) | 일치 |
+| drilling | 모든 분석에서 일관 식별, 광대역 신호 | 0.623 (중하위) | 일치 (어려운 클래스) |
+| jackhammer | 반복적 타격, 0.5 수준 | 0.530 (최하위) | 일치 |
+| car_horn | 최저 정확도, 변환에 민감 | 0.782 (상위) | 불일치 (예상보다 높음) |
+| children_playing | 평균 Peak 0.27, 가장 조용 | 0.581 (중하위) | 변동 |
+| air_conditioner | 평균 Peak 0.30, 조용한 환경음 | 0.531 (하위) | 변동 |
 
 ### 5-2. Fold별 어려움 패턴
 
@@ -379,6 +434,8 @@ mean (128차원) + std (128차원)
 | street_music | 0.73 | 0.79 | 0.69 |
 | air_conditioner | 0.56 | 0.78 | 0.51 |
 
+(클래스별 정확도 = recall 기준)
+
 ---
 
 ## 6. 인지하고 가야 할 사항
@@ -400,17 +457,21 @@ mean (128차원) + std (128차원)
 - 2차의 평균 0.636은 모든 fold(특히 fold 1=0.545)의 평균
 - fold 10이 상대적으로 정확도가 높은 fold라는 점이 1차-B 결과에 반영됨
 
-### 6-3. 클래스별 성능 격차
+### 6-3. 평가 지표 간 관계 (balanced accuracy)
 
-| 그룹 | 클래스 | 2차 정확도 |
+클래스 불균형이 있는 본 데이터에서, 2차 분석의 balanced accuracy(0.6594)가 accuracy(0.6358)보다 높다. 이는 소수 클래스인 gun_shot(374개)의 recall이 0.9251로 매우 높아, 클래스별 recall을 동등 가중하는 balanced accuracy를 끌어올리기 때문이다. accuracy만 볼 경우 다수 클래스(1000개씩)의 성능에 가려지는 부분을 balanced accuracy와 macro 지표가 보완한다.
+
+### 6-4. 클래스별 성능 격차
+
+| 그룹 | 클래스 | 2차 F1 |
 | --- | --- | --- |
-| 상위 | gun_shot, dog_bark, car_horn | 0.72 ~ 0.93 |
-| 중위 | street_music, siren, children_playing | 0.61 ~ 0.69 |
-| 하위 | drilling, engine_idling, jackhammer, air_conditioner | 0.51 ~ 0.61 |
+| 상위 | gun_shot, car_horn, dog_bark | 0.70 ~ 0.86 |
+| 중위 | siren, street_music, engine_idling, drilling | 0.62 ~ 0.67 |
+| 하위 | children_playing, air_conditioner, jackhammer | 0.53 ~ 0.58 |
 
-상위-하위 그룹 간 정확도 격차 약 40%p.
+상위-하위 그룹 간 F1 격차 약 33%p.
 
-### 6-4. 기계음 4종의 상호 혼동
+### 6-5. 기계음 4종의 상호 혼동
 
 air_conditioner, engine_idling, jackhammer, drilling이 서로 가장 빈번하게 혼동된다. 각 쌍에서 100건 이상의 혼동 발생.
 
@@ -420,11 +481,11 @@ air_conditioner, engine_idling, jackhammer, drilling이 서로 가장 빈번하�
 
 이 4개 클래스가 본 MLP 모델에서 분류 난이도가 가장 높은 그룹.
 
-### 6-5. Fold 1의 낮은 정확도
+### 6-6. Fold 1의 낮은 정확도
 
 본 MLP 2차 분석에서 fold 1이 0.5452로 가장 낮음. 이전 전처리 분석에서는 fold 1이 두드러지지 않았으나 본 모델에서는 가장 어려운 fold로 나타남.
 
-### 6-6. MLP의 256차원 feature 한계
+### 6-7. MLP의 256차원 feature 한계
 
 본 분석은 log-mel spectrogram(128 × 173)을 시간축 평균/표준편차로 압축한 256차원 feature를 사용. 시간축 정보가 압축 과정에서 손실됨. 시간 패턴이 중요한 클래스(예: 반복적인 jackhammer 타격, drilling의 진동 패턴)에서 정확도가 낮은 이유 중 하나일 수 있음.
 
@@ -439,9 +500,18 @@ air_conditioner, engine_idling, jackhammer, drilling이 서로 가장 빈번하�
 | 주요 라이브러리 | librosa 0.11.0, numpy, pandas, scikit-learn, matplotlib |
 | 분석 스크립트 | code/extract_features.py, code/mlp_model.py, code/mlp_comparison_plots.py |
 | Feature 데이터 | features/mlp_features.csv (8,732행 × 260열) |
-| 결과 데이터 | code/output/mlp_v1a_no_val.csv, mlp_v1a_no_val_class_acc.csv, mlp_v1b_with_val.csv, mlp_v1b_with_val_class_acc.csv, mlp_v2_cv.csv, mlp_v2_class_acc.csv, mlp_comparison_summary.csv |
+| 결과 데이터 | code/output/mlp_v1a_no_val.csv, mlp_v1b_with_val.csv, mlp_v2_cv.csv, mlp_full_metrics.csv, mlp_*_classwise_metrics.csv, mlp_*_predictions.csv |
 | 시각화 | mlp_v1a_no_val_confusion.png, mlp_v1a_no_val_training_curve.png, mlp_v1b_with_val_confusion.png, mlp_v1b_with_val_training_curve.png, mlp_v2_confusion.png, mlp_v2_fold_accuracy.png, mlp_v1a_vs_v1b_class_acc.png, mlp_all_three_class_acc.png |
 | 전처리 파라미터 | SR=22050, mono, 32-float, 4초 (repeat padding), n_mels=128, n_fft=2048, hop_length=512 |
 | MLP 구조 | Hidden Layer 2개 (256 → 128 → 64 → 10), Dropout 0.3 |
 | 학습 설정 | Adam (lr=0.001), CrossEntropyLoss, batch=64, max epoch=100, early stopping patience=10 |
+| 평가 지표 | 12개 항목 (accuracy, balanced accuracy, macro/weighted precision·recall·F1, class별 precision·recall·F1, confusion matrix) |
 | 재현 가능성 | random_state=42 |
+
+### 분석 결과 요약
+
+| 분석 | accuracy | balanced accuracy | macro F1 | weighted F1 |
+| --- | --- | --- | --- | --- |
+| 1차-A (Val 없음) | 0.6284 | 0.6496 | 0.6462 | 0.6276 |
+| 1차-B (Val=fold9, 채택) | 0.6858 | 0.6988 | 0.7045 | 0.6868 |
+| 2차 (10-fold CV 통합) | 0.6358 | 0.6594 | 0.6575 | 0.6346 |

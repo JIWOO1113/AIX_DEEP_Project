@@ -96,9 +96,27 @@ embedding 추출은 본체 1회 통과로 약 10~15분 소요, 이후 head 학�
 | Train | fold 1~8 (7,079개) |
 | Validation | fold 9 (816개) |
 | Test | fold 10 (837개) |
-| 평가 지표 | Accuracy, Macro F1, Confusion Matrix, 클래스별 precision/recall/F1 |
 
 fold 분할은 MLP 1차-B와 완전히 동일하다(7079/816/837). 동일한 Test fold(10)를 사용하므로 MLP와 직접 비교가 가능하다.
+
+### 1-8. 평가 지표 (팀 합의 12개 항목)
+
+본 프로젝트는 모든 모델에 대해 동일한 12개 평가 항목을 사용한다. UrbanSound8K는 클래스 불균형(gun_shot 374, car_horn 429 vs 나머지 ~1000)이 있으므로, accuracy 단일 지표가 아닌 balanced accuracy와 macro 평균 지표를 함께 본다.
+
+| 통계값 | 설명 |
+| --- | --- |
+| accuracy | 전체 sample 중 모델이 정답을 맞힌 비율 |
+| balanced accuracy | class별 recall을 평균낸 값. class imbalance가 있을 때 accuracy보다 공정하게 볼 수 있음 |
+| macro precision | class별 precision을 단순 평균한 값. 모든 class를 같은 비중으로 반영 |
+| macro recall | class별 recall을 단순 평균한 값. 작은 class의 탐지 성능까지 반영 |
+| macro F1 | class별 F1을 단순 평균한 값. class imbalance가 있는 모델 비교에서 핵심 지표로 사용 |
+| weighted precision | class별 precision을 sample 수에 따라 가중 평균한 값 |
+| weighted recall | class별 recall을 sample 수에 따라 가중 평균한 값 |
+| weighted F1 | class별 F1을 sample 수에 따라 가중 평균한 값. 실제 데이터 분포 기준 성능을 반영 |
+| class별 precision | 특정 class라고 예측한 sample 중 실제로 그 class인 비율. 오탐이 많은지 확인 |
+| class별 recall | 실제 특정 class sample 중 모델이 제대로 맞힌 비율. 미탐이 많은지 확인 |
+| class별 F1 | class별 precision과 recall의 조화평균. 각 class의 종합 성능 확인 |
+| confusion matrix | 실제 class와 예측 class의 대응표. 어떤 class끼리 헷갈리는지 확인 |
 
 ---
 
@@ -112,27 +130,32 @@ AudioSet pretrained 본체를 동결한 채 768차원 embedding을 추출하고,
 
 | 지표 | 값 |
 | --- | --- |
-| Test Accuracy | 0.8829 |
-| Test Macro F1 | 0.8903 |
+| accuracy | 0.8829 |
+| balanced accuracy | 0.8861 |
+| macro precision | 0.9006 |
+| macro recall | 0.8861 |
+| macro F1 | 0.8903 |
+| weighted precision | 0.8881 |
+| weighted recall | 0.8829 |
+| weighted F1 | 0.8824 |
 | Best Val Accuracy | 0.8750 |
-| 학습 Epoch | 50 (best val 기준 선택) |
 
 학습 과정에서 Val Accuracy는 epoch 1의 0.2341에서 시작하여 epoch 15에서 0.8431, epoch 50에서 0.8750으로 점진 상승했다.
 
-### 2-3. 클래스별 성능 (정확도순 정렬)
+### 2-3. 클래스별 성능 (F1 정확도순 정렬)
 
 | 클래스 | precision | recall | F1-score | n |
 | --- | --- | --- | --- | --- |
-| gun_shot | 1.0000 | 0.9690 | 0.9840 | 32 |
-| jackhammer | 0.9890 | 0.9790 | 0.9840 | 96 |
-| engine_idling | 0.9160 | 0.9350 | 0.9260 | 93 |
-| drilling | 0.9470 | 0.8900 | 0.9180 | 100 |
-| car_horn | 0.9350 | 0.8790 | 0.9060 | 33 |
-| street_music | 0.8910 | 0.9000 | 0.8960 | 100 |
-| children_playing | 0.8100 | 0.9800 | 0.8870 | 100 |
-| dog_bark | 0.8290 | 0.8700 | 0.8490 | 100 |
-| siren | 0.9510 | 0.6990 | 0.8060 | 83 |
-| air_conditioner | 0.7380 | 0.7600 | 0.7490 | 100 |
+| jackhammer | 0.9895 | 0.9792 | 0.9843 | 96 |
+| gun_shot | 1.0000 | 0.9688 | 0.9841 | 32 |
+| engine_idling | 0.9158 | 0.9355 | 0.9255 | 93 |
+| drilling | 0.9468 | 0.8900 | 0.9175 | 100 |
+| car_horn | 0.9355 | 0.8788 | 0.9062 | 33 |
+| street_music | 0.8911 | 0.9000 | 0.8955 | 100 |
+| children_playing | 0.8099 | 0.9800 | 0.8869 | 100 |
+| dog_bark | 0.8286 | 0.8700 | 0.8488 | 100 |
+| siren | 0.9508 | 0.6988 | 0.8056 | 83 |
+| air_conditioner | 0.7379 | 0.7600 | 0.7488 | 100 |
 
 ### 2-4. Confusion Matrix
 
@@ -181,8 +204,14 @@ AudioSet pretrained 모델을 fresh하게 재로드한 뒤(FE의 head 학습 영
 
 | 지표 | 값 |
 | --- | --- |
-| Test Accuracy | 0.8901 |
-| Test Macro F1 | 0.8993 |
+| accuracy | 0.8901 |
+| balanced accuracy | 0.8999 |
+| macro precision | 0.9102 |
+| macro recall | 0.8999 |
+| macro F1 | 0.8993 |
+| weighted precision | 0.9001 |
+| weighted recall | 0.8901 |
+| weighted F1 | 0.8890 |
 | Best Val Accuracy | 0.9007 (epoch 3) |
 | 종료 Epoch | 5 (Early Stopping, patience=2) |
 
@@ -200,20 +229,20 @@ AudioSet pretrained 모델을 fresh하게 재로드한 뒤(FE의 head 학습 영
 
 Train Loss는 0.2790 → 0.0077로 급감(거의 0)한 반면, Val Loss는 0.4694 → 0.6685로 지속 상승했다. Val Accuracy는 0.886 ~ 0.901 범위에서 진동하며 추세적 상승을 보이지 않았다.
 
-### 3-4. 클래스별 성능 (정확도순 정렬)
+### 3-4. 클래스별 성능 (F1 정확도순 정렬)
 
 | 클래스 | precision | recall | F1-score | n |
 | --- | --- | --- | --- | --- |
 | gun_shot | 1.0000 | 1.0000 | 1.0000 | 32 |
-| jackhammer | 0.9600 | 1.0000 | 0.9800 | 96 |
-| car_horn | 0.9140 | 0.9700 | 0.9410 | 33 |
-| engine_idling | 0.9560 | 0.9250 | 0.9400 | 93 |
-| street_music | 0.8860 | 0.9300 | 0.9070 | 100 |
-| drilling | 0.9770 | 0.8400 | 0.9030 | 100 |
-| children_playing | 0.8150 | 0.9700 | 0.8860 | 100 |
-| dog_bark | 0.7500 | 0.9300 | 0.8300 | 100 |
-| siren | 1.0000 | 0.6750 | 0.8060 | 83 |
-| air_conditioner | 0.8440 | 0.7600 | 0.8000 | 100 |
+| jackhammer | 0.9600 | 1.0000 | 0.9796 | 96 |
+| car_horn | 0.9143 | 0.9697 | 0.9412 | 33 |
+| engine_idling | 0.9556 | 0.9247 | 0.9399 | 93 |
+| street_music | 0.8857 | 0.9300 | 0.9073 | 100 |
+| drilling | 0.9767 | 0.8400 | 0.9032 | 100 |
+| children_playing | 0.8151 | 0.9700 | 0.8858 | 100 |
+| dog_bark | 0.7500 | 0.9300 | 0.8304 | 100 |
+| siren | 1.0000 | 0.6747 | 0.8058 | 83 |
+| air_conditioner | 0.8444 | 0.7600 | 0.8000 | 100 |
 
 ### 3-5. Confusion Matrix
 
@@ -259,10 +288,16 @@ FE와 Full FT는 fold 분할(train 1~8, val 9, test 10)과 평가 방식이 동�
 
 | 지표 | Feature Extraction | Full Fine-tuning | 차이 |
 | --- | --- | --- | --- |
-| Test Accuracy | 0.8829 | 0.8901 | +0.0072 |
-| Test Macro F1 | 0.8903 | 0.8993 | +0.0090 |
+| accuracy | 0.8829 | 0.8901 | +0.0072 |
+| balanced accuracy | 0.8861 | 0.8999 | +0.0138 |
+| macro precision | 0.9006 | 0.9102 | +0.0096 |
+| macro recall | 0.8861 | 0.8999 | +0.0138 |
+| macro F1 | 0.8903 | 0.8993 | +0.0090 |
+| weighted precision | 0.8881 | 0.9001 | +0.0120 |
+| weighted recall | 0.8829 | 0.8901 | +0.0072 |
+| weighted F1 | 0.8824 | 0.8890 | +0.0066 |
 | Best Val Accuracy | 0.8750 | 0.9007 | +0.0257 |
-| 학습 시간 (T4) | 추출 10~15분 + head 1~2분 | 약 40~60분 (epoch당 약 38분) | Full이 약 3배 |
+| 학습 시간 (T4) | 추출 10~15분 + head 1~2분 | 약 40~60분 | Full이 약 3배 |
 
 ### 4-3. 클래스별 F1 비교 (정확도순 정렬, FE 기준)
 
@@ -309,13 +344,18 @@ MLP 1차-B와 AST는 fold 분할(train 1~8, val 9, test 10)과 Test fold(10)가 
 
 ### 5-2. 전체 성능 비교
 
-| 모델 | Test Accuracy | Macro F1 |
-| --- | --- | --- |
-| MLP 1차-B | 0.6858 | 0.7045 |
-| AST Feature Extraction | 0.8829 | 0.8903 |
-| AST Full Fine-tuning | 0.8901 | 0.8993 |
+| 지표 | MLP 1차-B | AST FE | AST Full FT |
+| --- | --- | --- | --- |
+| accuracy | 0.6858 | 0.8829 | 0.8901 |
+| balanced accuracy | 0.6988 | 0.8861 | 0.8999 |
+| macro precision | 0.7223 | 0.9006 | 0.9102 |
+| macro recall | 0.6988 | 0.8861 | 0.8999 |
+| macro F1 | 0.7045 | 0.8903 | 0.8993 |
+| weighted precision | 0.7004 | 0.8881 | 0.9001 |
+| weighted recall | 0.6858 | 0.8829 | 0.8901 |
+| weighted F1 | 0.6868 | 0.8824 | 0.8890 |
 
-AST FE는 MLP 대비 Accuracy +0.1971, Macro F1 +0.1858 개선되었다.
+AST FE는 MLP 1차-B 대비 accuracy +0.1971, macro F1 +0.1858 개선되었다. 모든 12개 지표에서 AST가 MLP를 큰 폭으로 상회한다.
 
 ### 5-3. 클래스별 정확도(recall) 비교
 
@@ -416,10 +456,10 @@ air_conditioner는 AST에서도 가장 낮은 정확도(0.7600)에 머물렀다.
 
 ### 분석 결과 요약
 
-| 분석 | Test Accuracy | Macro F1 |
-| --- | --- | --- |
-| MLP 1차-B (비교 기준) | 0.6858 | 0.7045 |
-| AST Feature Extraction | 0.8829 | 0.8903 |
-| AST Full Fine-tuning | 0.8901 | 0.8993 |
+| 분석 | accuracy | balanced accuracy | macro F1 | weighted F1 |
+| --- | --- | --- | --- | --- |
+| MLP 1차-B (비교 기준) | 0.6858 | 0.6988 | 0.7045 | 0.6868 |
+| AST Feature Extraction | 0.8829 | 0.8861 | 0.8903 | 0.8824 |
+| AST Full Fine-tuning | 0.8901 | 0.8999 | 0.8993 | 0.8890 |
 
 AST는 MLP 대비 약 +0.20 (Accuracy) 개선되었으며, 본체를 동결한 Feature Extraction만으로도 Full Fine-tuning에 근접한 성능을 달성했다.
