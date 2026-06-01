@@ -51,7 +51,7 @@ Members:
 
 # IV. Evaluation & Analysis
 
-### Train: fold 1-9 / Test: fold 10 
+### Train: fold 1-8 / Validation: fold 9 / Test: fold 10 
 <br>
 
 ### 평가 항목: 
