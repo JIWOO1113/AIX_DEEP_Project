@@ -56,17 +56,15 @@ XGBoost는 Gradient Boosting 기반의 앙상블 학습 알고리즘으로, 여�
 - Evaluation Metric: mlogloss
 - Random State: 42
 
-## Features Used
+### Features Used
 
 - MFCC (Mel-Frequency Cepstral Coefficients)
 - 40개의 MFCC 계수 추출
 - 각 계수의 평균(mean)과 표준편차(std) 계산
 - 총 Feature 수: 80개
+  - 40 MFCC means
+  - 40 MFCC standard deviations
 
-```text
-40 MFCC means
-+ 40 MFCC standard deviations
-= 80-dimensional feature vector
 
 ### 2. SVM
 Model Description
