@@ -65,7 +65,6 @@ XGBoost는 Gradient Boosting 기반의 앙상블 학습 알고리즘으로, 여�
 
 
 ### 2. SVM
-# 2. SVM
 
 ## Model Description
 
