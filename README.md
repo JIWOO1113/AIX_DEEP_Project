@@ -378,20 +378,22 @@ MLP가 입력 단계에서 시간 정보를 압축한다는 특성을 가졌다�
 | confusion matrix | 실제 class와 예측 class의 대응표. 어떤 class끼리 헷갈리는지 확인 |
 
 ### 1. XGboost 
+
 ## Overall Performance
 
 | Metric | Score |
 |----------|----------:|
-| Accuracy | 0.728793 |
-| Balanced Accuracy | 0.734558 |
-| Macro Precision | 0.776564 |
-| Macro Recall | 0.734558 |
-| Macro F1 | 0.746983 |
-| Weighted Precision | 0.749381 |
-| Weighted Recall | 0.728793 |
-| Weighted F1 | 0.730958 |
+| Validation Accuracy | 0.681373 |
+| Test Accuracy | 0.728793 |
+| Test Balanced Accuracy | 0.734558 |
+| Test Macro Precision | 0.776564 |
+| Test Macro Recall | 0.734558 |
+| Test Macro F1 | 0.746983 |
+| Test Weighted Precision | 0.749381 |
+| Test Weighted Recall | 0.728793 |
+| Test Weighted F1 | 0.730958 |
 
-## Per-Class Performance
+### Per-Class Performance
 
 | Class | Precision | Recall | F1-score |
 |---------|---------:|---------:|---------:|
@@ -408,49 +410,54 @@ MLP가 입력 단계에서 시간 정보를 압축한다는 특성을 가졌다�
 
 ### Result Analysis
 
-- 가장 높은 F1-score는 **gun_shot (0.888889)**, **engine_idling (0.862069)**, **car_horn (0.842105)** 에서 나타났다.
-- **siren (0.587413)**, **jackhammer (0.571429)**, **drilling (0.633028)** 은 상대적으로 낮은 성능을 보였다.
+- 가장 높은 F1-score는 gun_shot (0.888889), engine_idling (0.862069), car_horn (0.842105)에서 나타났다.
+- siren (0.587413), jackhammer (0.571429), drilling (0.633028)은 상대적으로 낮은 성능을 보였다.
 - children_playing은 Recall(0.81)은 높지만 Precision(0.54)이 낮아 다른 클래스가 children_playing으로 오분류되는 경향이 존재하였다.
 - engine_idling, gun_shot, car_horn과 같이 특징이 뚜렷한 소리는 높은 분류 성능을 보였다.
 
-## Confusion Matrix
+### Confusion Matrix
 
-| Actual Class | 주요 오분류 |
-|--------------|------------|
-| air_conditioner | jackhammer (15건) |
-| car_horn | street_music (6건) |
-| children_playing | dog_bark (10건) |
-| dog_bark | children_playing (11건) |
-| drilling | jackhammer (10건), siren (9건) |
-| engine_idling | children_playing (5건), jackhammer (3건) |
-| gun_shot | dog_bark (4건) |
-| jackhammer | drilling (44건) |
-| siren | jackhammer (42건), children_playing (34건) |
-| street_music | children_playing (13건) |
+| Actual \ Predicted | air_conditioner | car_horn | children_playing | dog_bark | drilling | engine_idling | gun_shot | jackhammer | siren | street_music |
+|-------------------|----------------:|---------:|-----------------:|---------:|---------:|--------------:|---------:|-----------:|------:|-------------:|
+| air_conditioner | 76 | 0 | 0 | 3 | 2 | 4 | 0 | 15 | 0 | 0 |
+| car_horn | 2 | 24 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 6 |
+| children_playing | 0 | 0 | 81 | 10 | 0 | 2 | 0 | 0 | 4 | 3 |
+| dog_bark | 0 | 0 | 11 | 80 | 2 | 0 | 1 | 0 | 1 | 5 |
+| drilling | 0 | 0 | 5 | 3 | 69 | 0 | 2 | 10 | 9 | 2 |
+| engine_idling | 5 | 0 | 5 | 1 | 0 | 75 | 0 | 3 | 3 | 1 |
+| gun_shot | 0 | 0 | 0 | 4 | 0 | 0 | 28 | 0 | 0 | 0 |
+| jackhammer | 1 | 0 | 1 | 0 | 44 | 0 | 0 | 50 | 0 | 0 |
+| siren | 0 | 0 | 34 | 7 | 0 | 0 | 0 | 0 | 42 | 0 |
+| street_music | 0 | 0 | 13 | 0 | 1 | 0 | 0 | 0 | 1 | 85 |
 
 ### Confusion Matrix Analysis
 
-- **drilling ↔ jackhammer** 사이의 혼동이 가장 크게 나타났다.
-- **siren → jackhammer (42건)**, **siren → children_playing (34건)** 으로 오분류되는 경우가 많았다.
-- **children_playing ↔ dog_bark** 사이에서도 상호 혼동이 발생하였다.
-- 반면 **gun_shot** 은 32개 중 28개를 정확히 분류하여 가장 안정적인 성능을 보였다.
-- 전반적으로 공사 소음(drilling, jackhammer) 및 도시 환경음(siren, children_playing) 간의 음향적 유사성이 오분류의 주요 원인으로 나타났다.
+- air_conditioner는 대부분 정확히 분류되었으나, 일부가 jackhammer(15건)로 오분류되었다.
+- children_playing과 dog_bark 사이에서 상호 혼동이 발생하였다. children_playing은 dog_bark로 10건, dog_bark는 children_playing으로 11건 오분류되었다.
+- drilling과 jackhammer 사이의 혼동이 가장 크게 나타났다. drilling은 jackhammer로 10건 오분류되었으며, jackhammer는 drilling으로 44건 오분류되었다.
+- siren은 children_playing으로 34건, dog_bark로 7건 오분류되어 도시 환경음 간의 혼동이 관찰되었다.
+- street_music는 children_playing으로 13건 오분류되는 경향을 보였다.
+- gun_shot은 32개 중 28개를 정확히 분류하여 비교적 안정적인 성능을 나타냈다.
+- 전반적으로 공사 소음(drilling, jackhammer)과 도시 환경음(children_playing, dog_bark, siren) 간의 음향적 유사성이 주요 오분류 원인으로 나타났다.
+
 
 ### 2. SVM
+
 ## Overall Performance
 
 | Metric | Score |
 |----------|----------:|
-| Accuracy | 0.702509 |
-| Balanced Accuracy | 0.722153 |
-| Macro Precision | 0.732377 |
-| Macro Recall | 0.722153 |
-| Macro F1 | 0.723635 |
-| Weighted Precision | 0.711003 |
-| Weighted Recall | 0.702509 |
-| Weighted F1 | 0.702494 |
+| Validation Accuracy | 0.703431 |
+| Test Accuracy | 0.702509 |
+| Test Balanced Accuracy | 0.722153 |
+| Test Macro Precision | 0.732377 |
+| Test Macro Recall | 0.722153 |
+| Test Macro F1 | 0.723635 |
+| Test Weighted Precision | 0.711003 |
+| Test Weighted Recall | 0.702509 |
+| Test Weighted F1 | 0.702494 |
 
-## Per-Class Performance
+### Per-Class Performance
 
 | Class | Precision | Recall | F1-score |
 |---------|---------:|---------:|---------:|
@@ -467,35 +474,35 @@ MLP가 입력 단계에서 시간 정보를 압축한다는 특성을 가졌다�
 
 ### Result Analysis
 
-- 가장 높은 F1-score는 **gun_shot (0.937500)** 에서 나타났다.
-- **engine_idling (0.827586)**, **street_music (0.825397)**, **car_horn (0.800000)** 역시 높은 분류 성능을 보였다.
-- **jackhammer (0.482759)**, **drilling (0.576923)** 은 상대적으로 낮은 성능을 보였다.
-- dog_bark와 children_playing은 Recall은 높지만 Precision이 상대적으로 낮아 다른 클래스와 혼동되는 경향이 나타났다.
+- 가장 높은 F1-score는 gun_shot (0.937500)에서 나타났다.
+- engine_idling (0.827586), street_music (0.825397), car_horn (0.800000) 역시 높은 분류 성능을 보였다.
+- jackhammer (0.482759), drilling (0.576923)은 상대적으로 낮은 성능을 보였다.
 - 공사 소음 계열(drilling, jackhammer)에서 성능 저하가 두드러졌다.
 
-## Confusion Matrix
+### Confusion Matrix
 
-| Actual Class | 주요 오분류 |
-|--------------|------------|
-| air_conditioner | gun_shot (17건), drilling (8건) |
-| car_horn | street_music (5건) |
-| children_playing | dog_bark (12건), siren (7건) |
-| dog_bark | children_playing (8건), street_music (5건) |
-| drilling | jackhammer (18건), siren (14건) |
-| engine_idling | air_conditioner (9건), dog_bark (5건) |
-| gun_shot | dog_bark (2건) |
-| jackhammer | drilling (45건) |
-| siren | jackhammer (51건), dog_bark (24건) |
-| street_music | children_playing (17건) |
+| Actual \ Predicted | air_conditioner | car_horn | children_playing | dog_bark | drilling | engine_idling | gun_shot | jackhammer | siren | street_music |
+|-------------------|----------------:|---------:|-----------------:|---------:|---------:|--------------:|---------:|-----------:|------:|-------------:|
+| air_conditioner | 68 | 0 | 0 | 5 | 1 | 8 | 0 | 17 | 1 | 0 |
+| car_horn | 1 | 26 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 5 |
+| children_playing | 1 | 0 | 80 | 12 | 0 | 0 | 0 | 0 | 7 | 0 |
+| dog_bark | 0 | 4 | 8 | 81 | 1 | 1 | 0 | 0 | 0 | 5 |
+| drilling | 0 | 0 | 1 | 4 | 60 | 0 | 2 | 18 | 14 | 1 |
+| engine_idling | 9 | 1 | 0 | 5 | 0 | 72 | 0 | 0 | 6 | 0 |
+| gun_shot | 0 | 0 | 0 | 2 | 0 | 0 | 30 | 0 | 0 | 0 |
+| jackhammer | 6 | 0 | 2 | 1 | 45 | 0 | 0 | 42 | 0 | 0 |
+| siren | 0 | 0 | 8 | 24 | 0 | 0 | 0 | 0 | 51 | 0 |
+| street_music | 1 | 1 | 17 | 0 | 1 | 0 | 0 | 0 | 2 | 78 |
 
 ### Confusion Matrix Analysis
 
-- **drilling ↔ jackhammer** 사이의 혼동이 가장 크게 나타났다.
-- **siren → jackhammer (51건)** 으로 오분류되는 경우가 매우 많았다.
-- **siren → dog_bark (24건)**, **street_music → children_playing (17건)** 역시 빈번하게 발생하였다.
-- **air_conditioner → gun_shot (17건)** 으로 잘못 분류된 사례도 관찰되었다.
-- 반면 **gun_shot** 은 32개 중 30개를 정확히 분류하여 가장 우수한 분류 성능을 보였다.
-- 전반적으로 음향 특성이 유사한 공사 소음(drilling, jackhammer)과 도시 환경음(siren, dog_bark, children_playing) 사이에서 혼동이 발생하는 경향을 보였다.
+- air_conditioner는 jackhammer(17건)와 engine_idling(8건)으로 오분류되는 경우가 많았다.
+- children_playing과 dog_bark 사이의 상호 혼동이 발생하였다. children_playing은 dog_bark로 12건, dog_bark는 children_playing으로 8건 오분류되었다.
+- drilling과 jackhammer 사이의 혼동이 가장 크게 나타났다. drilling은 jackhammer로 18건 오분류되었으며, jackhammer는 drilling으로 45건 오분류되었다.
+- siren은 dog_bark로 24건, children_playing으로 8건 오분류되어 도시 환경음 간의 혼동이 관찰되었다.
+- street_music는 children_playing으로 17건 오분류되는 경향을 보였다.
+- gun_shot은 32개 중 30개를 정확히 분류하여 가장 높은 분류 성능을 보였다.
+- 전반적으로 공사 소음(drilling, jackhammer)과 도시 환경음(children_playing, dog_bark, siren) 간의 음향적 유사성이 주요 오분류 원인으로 나타났다.
 
 ### 3. MLP
 
