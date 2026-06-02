@@ -488,6 +488,72 @@ MLP가 입력 단계에서 시간 정보를 압축한다는 특성을 가졌다�
 
 ### 4. 2D CNN
 
+## Model Description  
+CNN(Convolutional Neural Network)은 이미지와 같은 2차원 데이터를 처리하는 데 최적화된 구조로, 본 프로젝트에서는 **log-mel spectrogram**을 입력으로 받아 도시 환경음을 10개 class로 분류하도록 설계하였다.  
+
+소리는 본래 (주파수 × 시간)의 2차원 정보이며, CNN은 이 구조를 그대로 활용할 수 있다. 따라서 log-mel spectrogram을 96 × 150 크기의 2D 이미지로 변환하여 입력으로 사용하였다. CNN은 convolution layer를 통해 지역적 패턴(특정 주파수 대역의 시간적 변화)을 학습하고, pooling layer로 특징을 압축하여 최종적으로 fully-connected layer에서 class를 분류한다.  
+
+---
+
+### 구성  
+| **입력** | **내용** |
+|---|---|
+| 입력 | log-mel spectrogram (96 × 150 × 1) |
+| 흐름 | wav → mel-spectrogram (96 × T) → padding/cropping → (96 × 150 × 1) |
+| Conv Block 1 | Conv2D(32, 3×3) + ReLU + BatchNorm + MaxPooling(2×2) + Dropout(0.3) |
+| Conv Block 2 | Conv2D(64, 3×3) + ReLU + BatchNorm + MaxPooling(2×2) + Dropout(0.3) |
+| Conv Block 3 | Conv2D(128, 3×3) + ReLU + BatchNorm + MaxPooling(2×2) + Dropout(0.4) |
+| Conv Block 4 | Conv2D(256, 3×3) + ReLU + BatchNorm + MaxPooling(2×2) + Dropout(0.4) |
+| Classifier | Flatten → Dense(512, ReLU) + BatchNorm + Dropout(0.5) → Dense(10, Softmax) |
+| 출력 | 10개 class 확률 분포 |
+
+---
+
+## Design Decisions  
+CNN을 적용하며 가장 중요한 결정은 **시간 정보를 유지하는 방식**이었다. MLP와 달리 CNN은 2차원 입력을 그대로 처리할 수 있으므로, log-mel spectrogram의 시간축을 압축하지 않고 **96 × 150 크기의 2D 이미지**로 유지하였다.  
+
+또한 **SpecAugment**를 적용하여 모델의 일반화 성능을 높였다.  
+- 시간 마스킹: 특정 시간 구간을 평균값으로 대체  
+- 주파수 마스킹: 특정 주파수 대역을 평균값으로 대체  
+- 랜덤 노이즈: 작은 잡음을 추가하여 데이터 다양성 확보  
+
+이러한 설계는 CNN이 **주파수-시간 패턴을 학습**하면서도 과적합을 방지하도록 돕는다.  
+
+---
+
+## Hyperparameters  
+| **항목** | **내용** |
+|---|---|
+| Sample Rate | 22050 Hz |
+| Duration | 4.0 sec |
+| Padding | zero padding |
+| n_mels | 96 |
+| n_fft | 2048 |
+| hop_length | 512 |
+| Input Dim | (96, 150, 1) |
+| Conv Layers | 32 → 64 → 128 → 256 |
+| Dense Layer | 512 |
+| Dropout | 0.3 ~ 0.5 |
+| Epochs | 30 |
+| Batch Size | 16 |
+| Learning Rate | 0.001 (ReduceLROnPlateau 적용) |
+| Early Stopping Patience | 10 |
+| Optimizer | Adam |
+| Loss | Categorical CrossEntropy |
+| Random State | 42 |
+| Best Model 기준 | validation accuracy |
+
+---
+
+## Features Used  
+- 22050Hz mono audio를 4초 길이로 고정 (짧으면 zero padding)  
+- log-mel spectrogram 추출 (n_mels=96, n_fft=2048, hop_length=512)  
+- (96 × 150 × 1) 형태로 변환 후 CNN 입력  
+- SpecAugment 적용: 시간 마스킹, 주파수 마스킹, 랜덤 노이즈  
+- Train: fold 1-9 / Test: fold 10  
+- Train set 기준 mean/std로 정규화 후 validation·test에 동일 적용  
+
+
 ### 5. RCNN
 
 ## Overall Performance
