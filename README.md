@@ -40,11 +40,19 @@ Members:
 ## III-II 모델 
 
 ### 1. XGboost 
+
 ## Model Description
 
 XGBoost는 Gradient Boosting 기반의 앙상블 학습 알고리즘으로, 여러 개의 결정트리(Decision Tree)를 순차적으로 학습하여 예측 성능을 향상시킨다.
 과적합 방지 기능과 높은 학습 효율성을 제공하며, 다양한 머신러닝 문제에서 우수한 성능을 보이는 모델이다.
 본 프로젝트에서는 다중 클래스 환경음 분류(Multi-class Sound Classification)에 활용하였다.
+
+## Validation Strategy
+
+Fold 1~8을 Train set으로 사용하고 Fold 9를 Validation set으로 사용하였다.
+Validation Accuracy를 기준으로 최적 모델을 선택하였으며, 최종 선택된 모델에 대해 Fold 10 Test set으로 성능을 평가하였다.
+
+Best Validation Accuracy: **0.681373**
 
 ## Hyperparameters
 
@@ -58,7 +66,7 @@ XGBoost는 Gradient Boosting 기반의 앙상블 학습 알고리즘으로, 여�
 - Evaluation Metric: mlogloss
 - Random State: 42
 
-### Features Used
+## Features Used
 
 - MFCC (Mel-Frequency Cepstral Coefficients)
 - 40개의 MFCC 계수 추출
@@ -67,7 +75,6 @@ XGBoost는 Gradient Boosting 기반의 앙상블 학습 알고리즘으로, 여�
   - 40 MFCC means
   - 40 MFCC standard deviations
 
-
 ### 2. SVM
 
 ## Model Description
@@ -75,6 +82,13 @@ XGBoost는 Gradient Boosting 기반의 앙상블 학습 알고리즘으로, 여�
 SVM(Support Vector Machine)은 초평면(hyperplane)을 이용하여 서로 다른 클래스를 분류하는 지도학습 알고리즘이다.
 본 프로젝트에서는 비선형 데이터 분류를 위해 RBF(Radial Basis Function) 커널을 사용하였다.
 SVM은 고차원 특징 공간에서 클래스 간 경계를 효과적으로 학습할 수 있으며, 비교적 적은 데이터에서도 안정적인 성능을 보이는 장점이 있다.
+
+## Validation Strategy
+
+Fold 1~8을 Train set으로 사용하고 Fold 9를 Validation set으로 사용하였다.
+Validation Accuracy를 기준으로 최적 모델을 선택하였으며, 최종 선택된 모델에 대해 Fold 10 Test set으로 성능을 평가하였다.
+
+Best Validation Accuracy: **0.703431**
 
 ## Hyperparameters
 
