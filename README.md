@@ -7,34 +7,49 @@ Members:
     2024024139 박사라
 
 # I. Proposal (Option A)
-[TODO]
+[TODO]- 성신예
 # II. Datasets
-[TODO]
+[TODO] - 성신예 </br> 
+  1. 어떤 데이터이고 
+  2. 클래스 개수, 클래스 종류, flod 구조  
+  3. 출처
 # III. Methodology
-[TODO]
+[TODO] - 성신예
 ## III-I. 데이터 전처리
 
 ### Sample Rate: 22050 Hz
-1. [TODO] 조사한 전체 통계
-2. [TODO] 22050 Hz로 판단한 근거.(데이터 손실률 사진)
+1. [TODO] 조사한 전체 통계 - 성신예
+  - 전체 데이터의 Sample Rate 히스토그램
+2. [TODO] 22050 Hz로 판단한 근거. - 성신예
+  - 22050HZ와 다른 HZ사이의 에너지 보존률/MFCC 유사도 자료(그림)
 
 ### Channels: Mono
-1. [TODO] 전체 통계
-2. [TODO] Mono로 판단한 근거(양쪽에서 들리는 소리 차이가 없음)
+1. [TODO] 전체 통계 - 성신예
+  - 전체 데이터의 ..
+2. [TODO] Mono로 판단한 근거 - 성신예
+  - 양쪽에서 들리는 소리 차이가 없음을 보여줄 수 있는 자료(그림)
 
 ### Bit Depth: 32-float point
-1. [TODO] 전체 통계
-2. [TODO] float로 판단한 근거(정보 손실이 없다.)
+1. [TODO] 전체 통계 - 성신예
+  - 전체 데이터의 ..
+2. [TODO] float로 판단한 근거= - 성신예
+  - 그림 굳이 필요 X
+  - 정보 손실이 없다.
 
 ### Duration: 4초, repeat padding
-1. [TODO] 전체 통계
-2. [TODO] repeat padding의 근거
+1. [TODO] 전체 통계 - 성신예
+  - 전체 데이터의 ..
+2. [TODO] repeat padding의 근거 - 성신예
+  - 그림 필요 X
+  - 순간적인 소리가 특징일 수도 있으나, zero-padding을 하면 해당 특징을 잘 못 잡아낼 수 있다.
 
 ### Noramlization: 
-1. [TODO] MFCC + SVM / RandomForest / XGBoost </br> 
+1. [TODO] MFCC + SVM / RandomForest / XGBoost - 성신예 </br>  
     MFCC나 log-mel 통계 feature를 뽑은 뒤, train fold 기준으로 feature standardization
-2. [TODO] 2D CNN / CRNN용 log-mel spectrogram </br> 
+2. [TODO] 2D CNN / CRNN용 log-mel spectrogram - 성신예 </br> 
     log-mel spectrogram을 만든 뒤, train set 전체의 mean/std로 정규화
+  - MFCC랑 log-mel이 무엇인지
+  - 변환한 사진(log-mel)
 
 ---
 ## III-II 모델 
@@ -811,5 +826,7 @@ MLP에서 두드러진 약점은 반복 타격음인 `jackhammer`와 `drilling`�
 ### 7. 최종 비교 분석
 
 # V. Related Work
-
+ [TODO] - 성신예
+ 1. 관련된 연구 / 모델 / 프로젝트 조사 후 어떤 건지 쓰기
 # VI. Conclusion: Discussion
+ [TODO] - 성신예
