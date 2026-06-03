@@ -184,73 +184,60 @@ MLP를 적용하며 마주한 첫 번째 결정은 **입력을 어떻게 만들 
 
 ### 4. 2D CNN
 
-## Model Description  
-CNN(Convolutional Neural Network)은 이미지와 같은 2차원 데이터를 처리하는 데 최적화된 구조로, 본 프로젝트에서는 **log-mel spectrogram**을 입력으로 받아 도시 환경음을 10개 class로 분류하도록 설계하였다.  
+## Model Description
 
-소리는 본래 (주파수 × 시간)의 2차원 정보이며, CNN은 이 구조를 그대로 활용할 수 있다. 따라서 log-mel spectrogram을 96 × 150 크기의 2D 이미지로 변환하여 입력으로 사용하였다. CNN은 convolution layer를 통해 지역적 패턴(특정 주파수 대역의 시간적 변화)을 학습하고, pooling layer로 특징을 압축하여 최종적으로 fully-connected layer에서 class를 분류한다.  
+2D CNN(2D Convolutional Neural Network)은 소리를 **이미지처럼** 다루는 모델이다. log-mel spectrogram은 `(주파수 × 시간)`의 2차원 그림이므로, 이미지 인식에 쓰이는 2차원 합성곱(`Conv2d`)으로 그 안의 패턴을 직접 학습한다.
 
----
+MLP가 입력 단계에서 시간축을 평균으로 압축해 1차원 벡터로 만든 것과 달리, 2D CNN은 **spectrogram을 2차원 그대로 입력**받는다. 즉 "어떤 주파수에서 소리가 시간에 따라 어떻게 변하는가"라는 2차원 패턴을 모델이 직접 본다. 이 차이가 결과에 어떻게 나타나는지는 IV에서 확인한다.
 
-### 구성  
-| **입력** | **내용** |
-|---|---|
-| 입력 | log-mel spectrogram (96 × 150 × 1) |
-| 흐름 | wav → mel-spectrogram (96 × T) → padding/cropping → (96 × 150 × 1) |
-| Conv Block 1 | Conv2D(32, 3×3) + ReLU + BatchNorm + MaxPooling(2×2) + Dropout(0.3) |
-| Conv Block 2 | Conv2D(64, 3×3) + ReLU + BatchNorm + MaxPooling(2×2) + Dropout(0.3) |
-| Conv Block 3 | Conv2D(128, 3×3) + ReLU + BatchNorm + MaxPooling(2×2) + Dropout(0.4) |
-| Conv Block 4 | Conv2D(256, 3×3) + ReLU + BatchNorm + MaxPooling(2×2) + Dropout(0.4) |
-| Classifier | Flatten → Dense(512, ReLU) + BatchNorm + Dropout(0.5) → Dense(10, Softmax) |
-| 출력 | 10개 class 확률 분포 |
-| 코드 | models/CNN/cnn_model.py |
-| checkpoint | models/CNN/cnn_best.pt |
+## Design Decisions
 
----
+여러 모델을 비교하는 과정에서, MLP가 잃어버린 시간 정보를 보존하는 접근으로 2D CNN을 다루었다. 합성곱은 spectrogram 위를 훑으며 지역적인 패턴(특정 주파수 대역의 에너지 분포, 시간에 따른 반복 무늬 등)을 잡아낸다.
 
-## Design Decisions  
-CNN을 적용하며 가장 중요한 결정은 **시간 정보를 유지하는 방식**이었다. MLP와 달리 CNN은 2차원 입력을 그대로 처리할 수 있으므로, log-mel spectrogram의 시간축을 압축하지 않고 **96 × 150 크기의 2D 이미지**로 유지하였다.  
+모델은 **ConvBlock(Conv2d → BatchNorm → ReLU → Dropout → MaxPool)을 4개 쌓는** 구조로 설계했다. 블록을 거칠수록 단순한 패턴에서 점차 복잡한 패턴으로 추상화되며, 4개 정도면 환경음 분류에 충분한 표현력을 가지면서도 과하게 무겁지 않다. Conv 블록 뒤에는 Global Average Pooling으로 각 채널을 요약한 뒤, 분류기(Linear)로 10개 class 점수를 낸다. (RNN을 덧붙인 RCNN과 달리, 순수 합성곱만으로 분류한다.)
 
-또한 **SpecAugment**를 적용하여 모델의 일반화 성능을 높였다.  
-- 시간 마스킹: 특정 시간 구간을 평균값으로 대체  
-- 주파수 마스킹: 특정 주파수 대역을 평균값으로 대체  
-- 랜덤 노이즈: 작은 잡음을 추가하여 데이터 다양성 확보  
+## Input Flow
 
-이러한 설계는 CNN이 **주파수-시간 패턴을 학습**하면서도 과적합을 방지하도록 돕는다.  
+```
+wav → 22050Hz mono → 4초 고정(repeat pad) → log-mel (128 × 173) → 2D CNN → 10개 class
+```
 
----
+- 오디오를 4초로 고정하므로 시간축 프레임 수(T)가 약 173으로 일정해진다
+- 입력은 `(배치, 1채널, 128, 173)` 형태로 CNN에 들어간다
+- train(fold 1~8) 기준 평균/표준편차로 정규화하여 validation·test에 동일 적용
 
-## Hyperparameters  
-| **항목** | **내용** |
+## Hyperparameters
+
+| 항목 | 내용 |
 |---|---|
 | Sample Rate | 22050 Hz |
-| Duration | 4.0 sec |
-| Padding | zero padding |
-| n_mels | 96 |
+| Duration | 4.0 sec (repeat pad) |
+| n_mels | 128 |
 | n_fft | 2048 |
 | hop_length | 512 |
-| Input Dim | (96, 150, 1) |
-| Conv Layers | 32 → 64 → 128 → 256 |
-| Dense Layer | 512 |
-| Dropout | 0.3 ~ 0.5 |
-| Epochs | 30 |
-| Batch Size | 16 |
-| Learning Rate | 0.001 (ReduceLROnPlateau 적용) |
-| Early Stopping Patience | 10 |
+| 입력 형태 | (1, 128, 173) |
+| Conv 블록 | 4개 (32 → 64 → 128 → 128 채널) |
+| 블록 구성 | Conv2d(3×3) + BatchNorm + ReLU + Dropout2d + MaxPool(2×2) |
+| Pooling | Global Average Pooling |
+| Classifier | Dropout(0.3) + Linear(128 → 10) |
 | Optimizer | Adam |
-| Loss | Categorical CrossEntropy |
-| Random State | 42 |
+| Learning Rate | 0.001 |
+| Batch Size | 64 |
+| Max Epochs | 100 |
+| Early Stopping Patience | 10 |
+| Loss | CrossEntropyLoss |
+| Random Seed | 42 |
 | Best Model 기준 | validation accuracy |
 
----
+## Evaluation Setup
 
-## Features Used  
-- 22050Hz mono audio를 4초 길이로 고정 (짧으면 zero padding)  
-- log-mel spectrogram 추출 (n_mels=96, n_fft=2048, hop_length=512)  
-- (96 × 150 × 1) 형태로 변환 후 CNN 입력  
-- SpecAugment 적용: 시간 마스킹, 주파수 마스킹, 랜덤 노이즈  
-- Train: fold 1-9 / Test: fold 10  
-- Train set 기준 mean/std로 정규화 후 validation·test에 동일 적용  
-
+| 항목 | 설정 |
+|---|---|
+| Train | fold 1~8 (7,079개) |
+| Validation | fold 9 (816개) |
+| Test | fold 10 (837개) |
+| 코드 | `models/2D_CNN/2d_cnn_model.py` |
+| checkpoint | `models/2D_CNN/2d_cnn_best.pt` |
 
 ### 5. RCNN
 
@@ -592,35 +579,70 @@ MLP가 입력 단계에서 시간 정보를 압축한다는 특성을 가졌다�
 
 ### 4. 2D CNN
 
-## Fold별 성능
+## Overall Performance
 
-| Fold | Test Accuracy |
-|------|---------------|
-| Fold 1 | 0.6632 |
-| Fold 2 | 0.6858 |
-| Fold 3 | 0.6346 |
-| Fold 4 | (출력 일부 생략) |
-| Fold 5 | ... |
-| Fold 6 | ... |
-| Fold 7 | ... |
-| Fold 8 | ... |
-| Fold 9 | ... |
-| Fold 10 | ... |
+| Metric | Score |
+|---|---:|
+| Test Loss | 0.5937 |
+| Accuracy | 0.8124 |
+| Balanced Accuracy | 0.8232 |
+| Macro Precision | 0.8573 |
+| Macro Recall | 0.8232 |
+| Macro F1 | 0.8275 |
+| Weighted Precision | 0.8350 |
+| Weighted Recall | 0.8124 |
+| Weighted F1 | 0.8101 |
+| Best Val Accuracy | 0.8100 |
+| 종료 Epoch | 48 (Early Stopping) |
 
----
+## Per-Class Performance (F1 내림차순)
 
-## 최종 성능
+| Class | Precision | Recall | F1-score | Support |
+|---|---:|---:|---:|---:|
+| gun_shot | 1.0000 | 1.0000 | 1.0000 | 32 |
+| car_horn | 0.9655 | 0.8485 | 0.9032 | 33 |
+| jackhammer | 0.7931 | 0.9583 | 0.8679 | 96 |
+| street_music | 0.8017 | 0.9300 | 0.8611 | 100 |
+| drilling | 0.8681 | 0.7900 | 0.8272 | 100 |
+| engine_idling | 0.8974 | 0.7527 | 0.8187 | 93 |
+| dog_bark | 0.8523 | 0.7500 | 0.7979 | 100 |
+| children_playing | 0.6258 | 0.9700 | 0.7608 | 100 |
+| air_conditioner | 0.8118 | 0.6900 | 0.7459 | 100 |
+| siren | 0.9574 | 0.5422 | 0.6923 | 83 |
 
-- **평균 정확도**: 0.7064  
-- **표준편차**: ± 0.0499  
+## Confusion Matrix
 
----
+![2D CNN Confusion Matrix](images/2d_cnn_confusion.png)
 
-## 해석
-- Fold별 정확도는 **0.63 ~ 0.69** 범위에서 분포하며, 일부 Fold에서 데이터 증강 및 학습 안정성에 따라 변동이 나타남.  
-- 최종 평균 정확도 **70.6%**는 CNN 기반 환경음 분류 모델의 baseline 성능으로, SpecAugment와 학습률 감소(ReduceLROnPlateau) 적용이 성능 향상에 기여함.  
-- 표준편차가 약 **0.05**로 나타나 Fold 간 성능 차이가 크지 않음을 확인할 수 
+## Major Confusions (5건 이상)
 
+| 실제 class | 주된 오분류 | 건수 |
+|---|---|---:|
+| siren | children_playing | 22 |
+| engine_idling | air_conditioner | 15 |
+| dog_bark | children_playing | 13 |
+| siren | dog_bark | 12 |
+| air_conditioner | children_playing | 11 |
+| drilling | jackhammer | 10 |
+| air_conditioner | jackhammer | 10 |
+| dog_bark | street_music | 8 |
+| street_music | children_playing | 7 |
+| air_conditioner | drilling | 6 |
+| drilling | children_playing | 5 |
+
+## Result Analysis
+
+- 강점: `gun_shot`(F1 1.0000), `car_horn`(0.9032), `jackhammer`(0.8679)
+- 약점: `siren`(0.6923), `air_conditioner`(0.7459), `children_playing`(0.7608)
+- 주요 혼동: `siren → children_playing`(22), `engine_idling → air_conditioner`(15)
+
+**관찰.** Test Accuracy 0.8124, Macro F1 0.8275를 기록했다. `gun_shot`은 완벽 분류(F1 1.0000), 반복 타격음인 `jackhammer`(0.8679)와 `drilling`(0.8272)도 비교적 잘 구별된다. 반면 `siren`은 precision 0.9574로 높지만 recall 0.5422로 낮아, 실제 siren의 약 절반을 `children_playing`(22건)·`dog_bark`(12건)로 놓쳤다. `children_playing`은 recall 0.9700로 거의 다 맞히지만 precision 0.6258에 그쳐, 여러 class가 이쪽으로 흘러드는 흡수 class로 작동했다.
+
+**해석.** 2D CNN은 spectrogram을 시간축까지 보존한 2차원 입력으로 받기 때문에, 합성곱이 "시간에 따른 반복 무늬"를 패턴으로 포착할 수 있다. 그 결과 `jackhammer`·`drilling` 같은 반복 타격음 계열을 비교적 잘 구별한다. 즉 입력에서 시간 정보를 유지하는 것이 이러한 기계음 분류에 유리하게 작용한 것으로 볼 수 있다.
+
+다만 `siren`처럼 다른 소리(`children_playing`·`dog_bark`)와 음향적으로 겹치는 class는 여전히 약했다. 이는 입력 표현 방식과 무관하게 **데이터 자체의 모호성**에서 비롯된 한계로 보인다.
+
+> 2D CNN은 spectrogram을 2차원 그대로 입력받아 시간에 따른 반복 패턴을 학습하며, 이를 통해 반복 타격음 계열(`jackhammer`·`drilling`)을 효과적으로 구별한다. 다만 `siren`처럼 소리 자체가 다른 class와 겹치는 경우는 모델 구조로 해소되지 않으며, 이는 데이터의 본질적 모호성에 해당한다.
 
 ### 5. RCNN
 
