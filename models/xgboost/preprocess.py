@@ -6,6 +6,9 @@ import librosa
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "UrbanSound8K"
+HERE = Path(__file__).resolve().parent
+INTERMEDIATE_DIR = HERE / "intermediate"
+INTERMEDIATE_DIR.mkdir(parents=True, exist_ok=True)
 
 CSV_PATH = DATA_DIR / "metadata" / "UrbanSound8K.csv"
 AUDIO_DIR = DATA_DIR / "audio"
@@ -80,9 +83,9 @@ print("X shape:", X.shape)
 print("y shape:", y.shape)
 print("folds shape:", folds.shape)
 
-np.save("X_mfcc.npy", X)
-np.save("y.npy", y)
-np.save("folds.npy", folds)
-np.save("class_names.npy", class_names)
+np.save(INTERMEDIATE_DIR / "X_mfcc.npy", X)
+np.save(INTERMEDIATE_DIR / "y.npy", y)
+np.save(INTERMEDIATE_DIR / "folds.npy", folds)
+np.save(INTERMEDIATE_DIR / "class_names.npy", class_names)
 
-print("저장 완료!")
+print(f"저장 완료: {INTERMEDIATE_DIR}")
