@@ -15,18 +15,18 @@ Members:
 1. 어떤 데이터이고
 UrbanSound8K은 도시 환경에서 발생하는 실제 소음(urban sounds)을 4초 이하로 잘라 라벨링한 데이터셋이다. Freesound.org에 업로드된 필드 레코딩에서 추출되었으며, 총 8,732개의 WAV 파일로 구성된다. 각 파일은 도시 생활에서 흔히 들을 수 있는 소리(공사 소음, 교통 소음, 사람/동물 소리 등)를 포함하며, 배경 소음이 섞여 있어 현실적인 환경음 분류 문제를 잘 반영한다.
 
-3. 클래스 개수, 클래스 종류, fold 구조
-클래스 개수: 10개 (multi-class classification)
-클래스 종류: air_conditioner, car_horn, children_playing, dog_bark, drilling, engine_idling, gun_shot, jackhammer, siren, street_music
+2. 클래스 개수, 클래스 종류, fold 구조  
+클래스 개수: 10개 (multi-class classification)  
+클래스 종류: air_conditioner, car_horn, children_playing, dog_bark, drilling, engine_idling, gun_shot, jackhammer, siren, street_music  
 Fold 구조: 미리 10개의 fold(fold1~fold10)로 나누어 제공된다. 이는 동일한 원본 레코딩에서 나온 슬라이스가 같은 fold에 들어가지 않도록 설계되어 교차 검증 시 데이터 누출을 방지한다. 일반적으로 fold 1~9(또는 1~8)를 train, 나머지를 validation/test로 사용하며, 10-fold cross validation을 권장한다. 본 프로젝트에서는 Train: fold 1~8, Validation: fold 9, Test: fold 10을 주로 사용하였다.
 
-4. 출처
-공식 사이트: https://urbansounddataset.weebly.com/urbansound8k.html
-원 논문: Salamon et al., "A Dataset and Taxonomy for Urban Sound Research" (ACM Multimedia 2014)
-라이선스: CC BY-NC 3.0 (비상업적 연구 목적 자유 이용)
+3. 출처
+공식 사이트: https://urbansounddataset.weebly.com/urbansound8k.html  
+원 논문: Salamon et al., "A Dataset and Taxonomy for Urban Sound Research" (ACM Multimedia 2014)  
+라이선스: CC BY-NC 3.0 (비상업적 연구 목적 자유 이용)  
 
 # III. Methodology
-[TODO] - 성신예
+
 ## III-I. 데이터 전처리
 
 ### Sample Rate: 22050 Hz
@@ -842,25 +842,26 @@ MLP에서 두드러진 약점은 반복 타격음인 `jackhammer`와 `drilling`�
 
 모델 간 종합 비교는 「7. 최종 비교 분석」에서 다룬다.
 
-### 7. 최종 비교 분석
+# 7. 최종 비교 분석
 
-# V. Related Work
-UrbanSound8K은 환경음 분류(Environmental Sound Classification, ESC) 연구의 대표 벤치마크 데이터셋이다. 초기 연구들은 MFCC + Random Forest/SVM 같은 전통 ML 접근을 사용했으나, 최근에는 Spectrogram을 입력으로 하는 CNN 계열 모델이 우수한 성능을 보인다.
+### V. Related Work
+UrbanSound8K은 환경음 분류(Environmental Sound Classification, ESC) 연구의 대표 벤치마크 데이터셋이다. 초기 연구들은 MFCC + Random Forest/SVM 같은 전통 ML 접근을 사용했으나, 최근에는 Spectrogram을 입력으로 하는 CNN 계열 모델이 우수한 성능을 보인다.  
 주요 관련 연구:
 
-Piczak (2015): Log-Mel Spectrogram + CNN으로 UrbanSound8K에서 높은 정확도 달성.
-Abdoli et al. (2019): 1D CNN으로 end-to-end 학습.
-Salamon et al. (2014): 데이터셋 제안 논문에서 SVM baseline 제시.
-최근: AST(Audio Spectrogram Transformer) 같은 pretrained 모델 활용, dilated convolution, attention mechanism 도입 등으로 85~90%+ accuracy 보고.
+Piczak (2015): Log-Mel Spectrogram + CNN으로 UrbanSound8K에서 높은 정확도 달성.  
+Abdoli et al. (2019): 1D CNN으로 end-to-end 학습.  
+Salamon et al. (2014): 데이터셋 제안 논문에서 SVM baseline 제시.  
+최근: AST(Audio Spectrogram Transformer) 같은 pretrained 모델 활용, dilated convolution, attention mechanism 도입 등으로 85~90%+ accuracy 보고.  
 
-본 프로젝트는 MFCC(ML) vs. Spectrogram(DL) 비교, 시간 정보 보존 효과, pretrained 모델의 FE vs. Full FT 분석을 통해 기존 연구를 확장한다.
-# VI. Conclusion: Discussion
-본 프로젝트를 통해 컴퓨터가 소리를 시간에 따른 숫자 신호(waveform)로 받아들이고, MFCC(요약 숫자 feature)나 Spectrogram(이미지-like 표현)으로 변환하여 패턴을 학습한다는 점을 확인하였다.
-주요 발견:
+본 프로젝트는 MFCC(ML) vs. Spectrogram(DL) 비교, 시간 정보 보존 효과, pretrained 모델의 FE vs. Full FT 분석을 통해 기존 연구를 확장한다.  
+### VI. Conclusion: Discussion
+본 프로젝트를 통해 컴퓨터가 소리를 시간에 따른 숫자 신호(waveform)로 받아들이고, MFCC(요약 숫자 feature)나 Spectrogram(이미지-like 표현)으로 변환하여 패턴을 학습한다는 점을 확인하였다.  
+주요 발견:  
 
-MFCC 기반 ML 모델(Random Forest, SVM 등)은 구현이 간단하고 해석 용이(feature importance)하나, 시간 정보 손실로 반복 패턴(drilling vs. jackhammer) 구분에 한계가 있다.
-Spectrogram 기반 CNN/RCNN/AST는 2D 패턴과 시간 흐름을 직접 학습하여 더 높은 성능(Accuracy 80~89%)을 보였으며, 특히 반복 타격음 class에서 우수했다. Pretrained AST의 Feature Extraction 방식은 데이터가 적은 상황에서도 효과적이었다.
-공통 오분류(siren ↔ children_playing/dog_bark, drilling ↔ jackhammer)는 데이터 자체의 음향적 유사성(주파수 대역, 배경 소음)에서 기인하며, 모델/표현 방식만으로는 완전 해결이 어렵다.
+MFCC 기반 ML 모델(Random Forest, SVM 등)은 구현이 간단하고 해석 용이(feature importance)하나, 시간 정보 손실로 반복 패턴(drilling vs. jackhammer) 구분에 한계가 있다.  
+Spectrogram 기반 CNN/RCNN/AST는 2D 패턴과 시간 흐름을 직접 학습하여 더 높은 성능(Accuracy 80~89%)을 보였으며, 특히 반복 타격음 class에서 우수했다. Pretrained AST의 Feature Extraction 방식은 데이터가 적은 상황에서도 효과적이었다.  
+공통 오분류(siren ↔ children_playing/dog_bark, drilling ↔ jackhammer)는 데이터 자체의 음향적 유사성(주파수 대역, 배경 소음)에서 기인하며, 모델/표현 방식만으로는 완전 해결이 어렵다.  
 
-의의: 오디오 분류에서 데이터 표현 방식이 모델 선택과 성능에 결정적임을 보여주었다. ML은 빠른 프로토타이핑에, DL은 복잡한 패턴 학습에 적합하다.
-한계 및 미래 작업: 클래스 불균형, 배경 소음 처리 강화, 실시간 inference 최적화, 더 다양한 pretrained 모델(예: BEATs) 적용 등. 이 프로젝트는 “컴퓨터가 소리를 어떻게 이해하는가”에 대한 교육적·실험적 통찰을 제공하며, 스마트시티 환경 모니터링 등 실제 응용의 기초가 될 수 있다.
+의의: 오디오 분류에서 데이터 표현 방식이 모델 선택과 성능에 결정적임을 보여주었다. ML은 빠른 프로토타이핑에, DL은 복잡한 패턴 학습에 적합하다.  
+
+한계 및 미래 작업: 클래스 불균형, 배경 소음 처리 강화, 실시간 inference 최적화, 더 다양한 pretrained 모델(예: BEATs) 적용 등. 이 프로젝트는 “컴퓨터가 소리를 어떻게 이해하는가”에 대한 교육적·실험적 통찰을 제공하며, 스마트시티 환경 모니터링 등 실제 응용의 기초가 될 수 있다.  
