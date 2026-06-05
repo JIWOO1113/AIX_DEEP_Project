@@ -14,13 +14,12 @@ log-mel spectrogram을 "이미지처럼" 2차원 그대로 입력받아, 2D CNN�
   - class별: precision, recall, F1
   - confusion matrix
 
-출력 (models/2D_CNN/output/):
-  - 2d_cnn_best.pt               : 학습된 best 모델 체크포인트
-  - 2d_cnn_metrics.csv           : 종합 지표 8개
-  - 2d_cnn_classwise_metrics.csv : class별 precision/recall/F1
-  - 2d_cnn_predictions.csv       : 샘플별 y_true/y_pred
-그림 (images/):
-  - 2d_cnn_confusion.png         : confusion matrix
+출력:
+  - models/2D_CNN/intermediate/: feature cache
+  - models/2D_CNN/2d_cnn_best.pt: best checkpoint
+  - models/2D_CNN/final/       : overall_metrics.csv, classwise_metrics.csv,
+                                 predictions.csv
+  - images/2d_cnn_confusion_matrix.png
 
 폴더 구조 (project_root 기준):
   project_root/
@@ -65,13 +64,13 @@ META_PATH = DATA_DIR / "metadata" / "UrbanSound8K.csv"
 
 # 결과/캐시는 이 파일과 같은 폴더(models/2D_CNN) 아래에 저장
 HERE = Path(__file__).resolve().parent
-OUT_DIR = HERE / "output"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-FEAT_PATH = HERE / "2d_cnn_features.npz"   # 2D feature 캐시 (있으면 재사용)
-
-# 그림은 project_root/images/ 에 저장 (팀 공통, 접두사로 모델 구분)
-IMG_DIR = ROOT / "images"
-IMG_DIR.mkdir(parents=True, exist_ok=True)
+INTERMEDIATE_DIR = HERE / "intermediate"
+FINAL_DIR = HERE / "final"
+IMAGE_DIR = Path(__file__).parent / ".." / ".." / "images"
+INTERMEDIATE_DIR.mkdir(parents=True, exist_ok=True)
+FINAL_DIR.mkdir(parents=True, exist_ok=True)
+IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+FEAT_PATH = INTERMEDIATE_DIR / "2d_cnn_features.npz"   # 2D feature 캐시 (있으면 재사용)
 
 
 # ============================================================
@@ -334,9 +333,21 @@ def main():
 
     # 4) 12개 지표
     metrics = compute_metrics(y_true, y_pred)
-    metrics["best_val_acc"] = best_val_acc
-    metrics["test_loss"] = test_loss
-    metrics["final_epoch"] = final_epoch
+    overall_metrics = {
+        "model": "2D_CNN",
+        "selection_metric": "validation_accuracy",
+        "best_validation_score": best_val_acc,
+        "best_params": "",
+        "test_loss": test_loss,
+        "final_epoch": final_epoch,
+        **metrics,
+    }
+    checkpoint_metrics = {
+        **metrics,
+        "best_val_acc": best_val_acc,
+        "test_loss": test_loss,
+        "final_epoch": final_epoch,
+    }
 
     print("=" * 60)
     print("[전체 평가 지표]")
@@ -347,31 +358,39 @@ def main():
     print(f"  best_val_acc        : {best_val_acc:.4f}")
     print(f"  final_epoch         : {final_epoch}")
 
-    pd.DataFrame([metrics]).to_csv(OUT_DIR / "2d_cnn_metrics.csv",
-                                   index=False, encoding="utf-8-sig")
+    pd.DataFrame([overall_metrics]).to_csv(
+        FINAL_DIR / "overall_metrics.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
 
     # class별 precision/recall/f1
     p, r, f, s = precision_recall_fscore_support(
         y_true, y_pred, labels=range(NUM_CLASSES), zero_division=0)
-    cw = pd.DataFrame({"class": class_names, "precision": p, "recall": r,
-                       "f1": f, "support": s}).sort_values("f1", ascending=False)
-    cw.to_csv(OUT_DIR / "2d_cnn_classwise_metrics.csv", index=False, encoding="utf-8-sig")
+    cw = pd.DataFrame({"model": "2D_CNN", "class": class_names, "precision": p, "recall": r,
+                       "f1": f, "support": s})
+    cw.to_csv(FINAL_DIR / "classwise_metrics.csv", index=False, encoding="utf-8-sig")
     print("\n[클래스별 지표]")
     print(cw.round(4).to_string(index=False))
 
     # 샘플별 예측값
-    pd.DataFrame({"y_true": y_true, "y_pred": y_pred}).to_csv(
-        OUT_DIR / "2d_cnn_predictions.csv", index=False, encoding="utf-8-sig")
+    pd.DataFrame({
+        "model": "2D_CNN",
+        "y_true": y_true,
+        "y_pred": y_pred,
+        "true_label": [class_names[int(i)] for i in y_true],
+        "pred_label": [class_names[int(i)] for i in y_pred],
+    }).to_csv(FINAL_DIR / "predictions.csv", index=False, encoding="utf-8-sig")
 
     # 체크포인트 저장 (학습된 best 모델)
-    ckpt_path = OUT_DIR / "2d_cnn_best.pt"
+    ckpt_path = HERE / "2d_cnn_best.pt"
     torch.save({
         "model_state_dict": model.state_dict(),
         "num_classes": NUM_CLASSES,
         "class_names": class_names,
         "seed": SEED,
         "best_val_acc": best_val_acc,
-        "metrics": metrics,
+        "metrics": checkpoint_metrics,
     }, ckpt_path)
     print(f"\n체크포인트 저장: {ckpt_path}")
 
@@ -391,12 +410,14 @@ def main():
         plt.xlabel("Predicted"); plt.ylabel("True")
         plt.title("2D CNN Confusion Matrix (Test fold 10)")
         plt.tight_layout()
-        plt.savefig(IMG_DIR / "2d_cnn_confusion.png", dpi=150, bbox_inches="tight")
+        plt.savefig(IMAGE_DIR / "2d_cnn_confusion_matrix.png", dpi=150, bbox_inches="tight")
         plt.close()
     except Exception as e:
         print(f"  (confusion matrix 그림 생략: {e})")
 
-    print(f"\n결과 저장: {OUT_DIR}")
+    print(f"\n중간 결과 저장: {INTERMEDIATE_DIR}")
+    print(f"최종 결과 저장: {FINAL_DIR}")
+    print(f"confusion matrix 이미지 저장: {IMAGE_DIR / '2d_cnn_confusion_matrix.png'}")
     print("=== 완료 ===")
 
 
