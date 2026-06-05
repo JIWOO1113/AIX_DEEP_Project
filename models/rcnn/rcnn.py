@@ -531,6 +531,7 @@ def save_checkpoint(
         "normalization": stats,
         "class_names": CLASS_NAMES,
         "epoch": epoch,
+        "selection_metric": "validation_accuracy",
         "best_metric": best_metric,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -546,10 +547,10 @@ def train_model(
     device: torch.device,
 ) -> Path:
     # 학습에 필요한 loader, model, loss, optimizer, scheduler를 준비한다.
-    output_dir = Path(args.output_dir)
     checkpoint_dir = Path(args.checkpoint_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    history_dir = Path(args.cache_dir).parent
+    history_dir.mkdir(parents=True, exist_ok=True)
 
     train_loader, val_loader, _ = make_loaders(
         cache_dir=cache_dir,
@@ -589,7 +590,7 @@ def train_model(
     best_path = checkpoint_dir / "best_rcnn.pt"
 
     for epoch in range(1, args.epochs + 1):
-        # validation macro F1이 좋아질 때만 best checkpoint를 갱신한다.
+        # validation accuracy가 좋아질 때만 best checkpoint를 갱신한다.
         train_loss = train_one_epoch(
             model=model,
             loader=train_loader,
@@ -599,11 +600,11 @@ def train_model(
             grad_clip=args.grad_clip,
         )
         val_metrics, _, _ = evaluate(model, val_loader, criterion, device)
-        scheduler.step(val_metrics["macro_f1"])
+        scheduler.step(val_metrics["accuracy"])
 
         row = {"epoch": epoch, "train_loss": train_loss, **val_metrics}
         history.append(row)
-        pd.DataFrame(history).to_csv(output_dir / "history.csv", index=False)
+        pd.DataFrame(history).to_csv(history_dir / "history.csv", index=False)
 
         print(
             "epoch "
@@ -614,8 +615,8 @@ def train_model(
             f"val_macro_f1={val_metrics['macro_f1']:.4f}"
         )
 
-        if val_metrics["macro_f1"] > best_metric + args.min_delta:
-            best_metric = val_metrics["macro_f1"]
+        if val_metrics["accuracy"] > best_metric + args.min_delta:
+            best_metric = val_metrics["accuracy"]
             bad_epochs = 0
             save_checkpoint(
                 path=best_path,
@@ -885,6 +886,7 @@ def save_test_outputs(
     image_dir: Path,
     summary_path: Path,
     checkpoint_path: Path,
+    checkpoint: Dict[str, object],
     cache_dir: Path,
     manifest: pd.DataFrame,
     preprocess_config: PreprocessConfig,
@@ -899,6 +901,21 @@ def save_test_outputs(
         json.dumps(metrics, indent=2),
         encoding="utf-8",
     )
+    model_args = checkpoint.get("model_args", {})
+    overall_metrics = {
+        "model": "RCNN",
+        "selection_metric": checkpoint.get("selection_metric", "validation_accuracy"),
+        "best_validation_score": checkpoint.get("best_metric"),
+        "best_params": json.dumps(model_args, ensure_ascii=False, sort_keys=True),
+        "test_loss": metrics.get("loss"),
+        "final_epoch": checkpoint.get("epoch"),
+        **{k: v for k, v in metrics.items() if k != "loss"},
+    }
+    pd.DataFrame([overall_metrics]).to_csv(
+        output_dir / "overall_metrics.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
 
     test_manifest = manifest[manifest["split"] == "test"].reset_index(drop=True).copy()
     test_manifest["true_label"] = [CLASS_NAMES[i] for i in y_true]
@@ -906,13 +923,36 @@ def save_test_outputs(
     test_manifest["pred_label"] = [CLASS_NAMES[i] for i in y_pred]
     test_manifest["correct"] = y_true == y_pred
     test_manifest.to_csv(output_dir / "test_predictions.csv", index=False)
+    predictions = pd.DataFrame({
+        "model": "RCNN",
+        "slice_file_name": test_manifest["slice_file_name"],
+        "fold": test_manifest["fold"],
+        "y_true": y_true,
+        "y_pred": y_pred,
+        "true_label": test_manifest["true_label"],
+        "pred_label": test_manifest["pred_label"],
+    })
+    predictions.to_csv(output_dir / "predictions.csv", index=False, encoding="utf-8-sig")
 
     cm = confusion_matrix(y_true, y_pred, labels=list(range(len(CLASS_NAMES))))
-    cm_frame = pd.DataFrame(cm, index=CLASS_NAMES, columns=CLASS_NAMES)
-    cm_frame.to_csv(output_dir / "confusion_matrix.csv")
 
     report_frame = report_to_frame(y_true, y_pred)
     report_frame.to_csv(output_dir / "classification_report.csv", index=False)
+    p, r, f, s = precision_recall_fscore_support(
+        y_true,
+        y_pred,
+        labels=list(range(len(CLASS_NAMES))),
+        zero_division=0,
+    )
+    classwise = pd.DataFrame({
+        "model": "RCNN",
+        "class": CLASS_NAMES,
+        "precision": p,
+        "recall": r,
+        "f1": f,
+        "support": s,
+    })
+    classwise.to_csv(output_dir / "classwise_metrics.csv", index=False, encoding="utf-8-sig")
 
     image_path = save_confusion_matrix_plot(cm, image_dir)
     save_feature_summary(
@@ -954,6 +994,7 @@ def test_model(
         image_dir=Path(args.image_dir),
         summary_path=Path(args.summary_md),
         checkpoint_path=checkpoint_path,
+        checkpoint=checkpoint,
         cache_dir=cache_dir,
         manifest=manifest,
         preprocess_config=PreprocessConfig(**checkpoint["preprocess_config"]),
@@ -976,6 +1017,7 @@ def test_model(
 def parse_args() -> argparse.Namespace:
     # CLI에서 전처리, 학습, 평가 옵션을 받을 수 있게 argument를 정의한다.
     root = project_root()
+    model_dir = Path(__file__).parent
     parser = argparse.ArgumentParser(
         description="RCNN training pipeline for UrbanSound8K log-mel classification."
     )
@@ -986,11 +1028,11 @@ def parse_args() -> argparse.Namespace:
         help="Run preprocessing, training, testing, or the full pipeline.",
     )
     parser.add_argument("--data-root", type=Path, default=root / "UrbanSound8K")
-    parser.add_argument("--cache-dir", type=Path, default=root / "rcnn_preprocessed")
-    parser.add_argument("--output-dir", type=Path, default=root / "rcnn_runs" / "rcnn_baseline")
-    parser.add_argument("--checkpoint-dir", type=Path, default=root / "models" / "rcnn")
-    parser.add_argument("--image-dir", type=Path, default=root / "images")
-    parser.add_argument("--summary-md", type=Path, default=root / "rcnn_feature_results.md")
+    parser.add_argument("--cache-dir", type=Path, default=model_dir / "intermediate" / "preprocessed")
+    parser.add_argument("--output-dir", type=Path, default=model_dir / "final")
+    parser.add_argument("--checkpoint-dir", type=Path, default=model_dir)
+    parser.add_argument("--image-dir", type=Path, default=model_dir / ".." / ".." / "images")
+    parser.add_argument("--summary-md", type=Path, default=model_dir / "final" / "feature_summary.md")
     parser.add_argument("--checkpoint", type=Path, default=None)
     parser.add_argument("--force-preprocess", action="store_true")
 
@@ -1051,7 +1093,7 @@ def main() -> None:
     cache_root = args.cache_dir.expanduser().resolve()
     args.output_dir = args.output_dir.expanduser().resolve()
     args.checkpoint_dir = args.checkpoint_dir.expanduser().resolve()
-    args.image_dir = args.image_dir.expanduser().resolve()
+    args.image_dir = args.image_dir.expanduser()
     args.summary_md = args.summary_md.expanduser().resolve()
     device = resolve_device(args.device)
     checkpoint_path = args.checkpoint.expanduser().resolve() if args.checkpoint else None
