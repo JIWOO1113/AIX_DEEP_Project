@@ -1,6 +1,7 @@
 import joblib
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -10,14 +11,74 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
+    precision_recall_fscore_support,
     classification_report,
     confusion_matrix
 )
 
+HERE = Path(__file__).resolve().parent
+INTERMEDIATE_DIR = HERE / "intermediate"
+FINAL_DIR = HERE / "final"
+IMAGE_DIR = Path(__file__).parent / ".." / ".." / "images"
+INTERMEDIATE_DIR.mkdir(parents=True, exist_ok=True)
+FINAL_DIR.mkdir(parents=True, exist_ok=True)
+IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
-X = np.load("X_mfcc.npy")
-y = np.load("y.npy")
-folds = np.load("folds.npy")
+
+def load_intermediate_array(name):
+    candidates = [
+        INTERMEDIATE_DIR / name,
+        HERE / name,
+        Path.cwd() / name,
+    ]
+    for path in candidates:
+        if path.exists():
+            return np.load(path, allow_pickle=True)
+    raise FileNotFoundError(
+        f"{name} not found. Run {HERE / 'preprocess.py'} first."
+    )
+
+
+def save_confusion_matrix_plot(cm, class_names, path, title):
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg", force=True)
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(figsize=(10, 8))
+        im = ax.imshow(cm, cmap="Blues")
+        fig.colorbar(im, ax=ax)
+        ax.set_xticks(range(len(class_names)))
+        ax.set_yticks(range(len(class_names)))
+        ax.set_xticklabels(class_names, rotation=45, ha="right")
+        ax.set_yticklabels(class_names)
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("True")
+        ax.set_title(title)
+
+        threshold = cm.max() / 2 if cm.size else 0
+        for i in range(cm.shape[0]):
+            for j in range(cm.shape[1]):
+                ax.text(
+                    j,
+                    i,
+                    int(cm[i, j]),
+                    ha="center",
+                    va="center",
+                    color="white" if cm[i, j] > threshold else "black",
+                )
+
+        fig.tight_layout()
+        fig.savefig(path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+    except Exception as e:
+        print(f"confusion matrix 그림 저장 생략: {e}")
+
+
+X = load_intermediate_array("X_mfcc.npy")
+y = load_intermediate_array("y.npy")
+folds = load_intermediate_array("folds.npy")
 
 train_mask = folds <= 8
 val_mask = folds == 9
@@ -78,22 +139,32 @@ print("Best Validation Accuracy:", best_val_acc)
 
 test_pred = best_model.predict(X_test_scaled)
 
-results = {
-    "Model": "SVM",
-    "Best Params": str(best_params),
-    "Validation Accuracy": best_val_acc,
-    "Test Accuracy": accuracy_score(y_test, test_pred),
-    "Test Balanced Accuracy": balanced_accuracy_score(y_test, test_pred),
-    "Test Macro Precision": precision_score(y_test, test_pred, average="macro", zero_division=0),
-    "Test Macro Recall": recall_score(y_test, test_pred, average="macro", zero_division=0),
-    "Test Macro F1": f1_score(y_test, test_pred, average="macro", zero_division=0),
-    "Test Weighted Precision": precision_score(y_test, test_pred, average="weighted", zero_division=0),
-    "Test Weighted Recall": recall_score(y_test, test_pred, average="weighted", zero_division=0),
-    "Test Weighted F1": f1_score(y_test, test_pred, average="weighted", zero_division=0),
+metrics = {
+    "accuracy": accuracy_score(y_test, test_pred),
+    "balanced_accuracy": balanced_accuracy_score(y_test, test_pred),
+    "macro_precision": precision_score(y_test, test_pred, average="macro", zero_division=0),
+    "macro_recall": recall_score(y_test, test_pred, average="macro", zero_division=0),
+    "macro_f1": f1_score(y_test, test_pred, average="macro", zero_division=0),
+    "weighted_precision": precision_score(y_test, test_pred, average="weighted", zero_division=0),
+    "weighted_recall": recall_score(y_test, test_pred, average="weighted", zero_division=0),
+    "weighted_f1": f1_score(y_test, test_pred, average="weighted", zero_division=0),
 }
 
-results_df = pd.DataFrame([results])
-results_df.to_csv("svm_overall_results.csv", index=False, encoding="utf-8-sig")
+results = {
+    "model": "SVM",
+    "selection_metric": "validation_accuracy",
+    "best_validation_score": best_val_acc,
+    "best_params": str(best_params),
+    "test_loss": np.nan,
+    "final_epoch": np.nan,
+    **metrics,
+}
+
+pd.DataFrame([results]).to_csv(
+    FINAL_DIR / "overall_metrics.csv",
+    index=False,
+    encoding="utf-8-sig",
+)
 
 report = classification_report(
     y_test,
@@ -104,18 +175,47 @@ report = classification_report(
 )
 
 report_df = pd.DataFrame(report).transpose()
-report_df.to_csv("svm_per_class_results.csv", encoding="utf-8-sig")
+report_df.to_csv(FINAL_DIR / "classification_report.csv", encoding="utf-8-sig")
 
-cm = confusion_matrix(y_test, test_pred)
-cm_df = pd.DataFrame(cm, index=target_names, columns=target_names)
-cm_df.to_csv("svm_confusion_matrix.csv", encoding="utf-8-sig")
+p, r, f, s = precision_recall_fscore_support(
+    y_test,
+    test_pred,
+    labels=range(len(target_names)),
+    zero_division=0,
+)
+classwise_df = pd.DataFrame({
+    "model": "SVM",
+    "class": target_names,
+    "precision": p,
+    "recall": r,
+    "f1": f,
+    "support": s,
+})
+classwise_df.to_csv(FINAL_DIR / "classwise_metrics.csv", index=False, encoding="utf-8-sig")
 
-joblib.dump(best_model, "svm_checkpoint.pkl")
-joblib.dump(scaler, "svm_scaler.pkl")
+predictions_df = pd.DataFrame({
+    "model": "SVM",
+    "y_true": y_test,
+    "y_pred": test_pred,
+    "true_label": [target_names[int(i)] for i in y_test],
+    "pred_label": [target_names[int(i)] for i in test_pred],
+})
+predictions_df.to_csv(FINAL_DIR / "predictions.csv", index=False, encoding="utf-8-sig")
+
+cm = confusion_matrix(y_test, test_pred, labels=range(len(target_names)))
+save_confusion_matrix_plot(
+    cm,
+    target_names,
+    IMAGE_DIR / "svm_confusion_matrix.png",
+    "SVM Confusion Matrix (Test fold 10)",
+)
+
+joblib.dump(best_model, HERE / "svm_checkpoint.pkl")
+joblib.dump(scaler, HERE / "svm_scaler.pkl")
 
 print("\n저장 완료:")
-print("svm_checkpoint.pkl")
-print("svm_scaler.pkl")
-print("svm_overall_results.csv")
-print("svm_per_class_results.csv")
-print("svm_confusion_matrix.csv")
+print(HERE / "svm_checkpoint.pkl")
+print(HERE / "svm_scaler.pkl")
+print(FINAL_DIR / "overall_metrics.csv")
+print(FINAL_DIR / "classwise_metrics.csv")
+print(IMAGE_DIR / "svm_confusion_matrix.png")
