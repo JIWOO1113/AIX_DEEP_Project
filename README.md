@@ -18,7 +18,7 @@ UrbanSound8K은 도시 환경에서 발생하는 실제 소음(urban sounds)을 
 2. 클래스 개수, 클래스 종류, fold 구조  
 클래스 개수: 10개 (multi-class classification)  
 클래스 종류: air_conditioner, car_horn, children_playing, dog_bark, drilling, engine_idling, gun_shot, jackhammer, siren, street_music  
-Fold 구조: 미리 10개의 fold(fold1~fold10)로 나누어 제공된다. 이는 동일한 원본 레코딩에서 나온 슬라이스가 같은 fold에 들어가지 않도록 설계되어 교차 검증 시 데이터 누출을 방지한다. 일반적으로 fold 1~9(또는 1~8)를 train, 나머지를 validation/test로 사용하며, 10-fold cross validation을 권장한다. 본 프로젝트에서는 Train: fold 1~8, Validation: fold 9, Test: fold 10을 주로 사용하였다.
+Fold 구조: 미리 10개의 fold(fold1-fold10)로 나누어 제공된다. 이는 동일한 원본 레코딩에서 나온 슬라이스가 같은 fold에 들어가지 않도록 설계되어 교차 검증 시 데이터 누출을 방지한다. 일반적으로 fold 1-9(또는 188)를 train, 나머지를 validation/test로 사용하며, 10-fold cross validation을 권장한다. 본 프로젝트에서는 Train: fold 1-8, Validation: fold 9, Test: fold 10을 주로 사용하였다.
 
 3. 출처
 공식 사이트: https://urbansounddataset.weebly.com/urbansound8k.html  
