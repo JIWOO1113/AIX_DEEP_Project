@@ -7,49 +7,46 @@ Members:
     2024024139 박사라
 
 # I. Proposal (Option A)
-[TODO]- 성신예
+이 프로젝트는 도시 환경 소리를 컴퓨터가 분류할 수 있도록 학습시키는 모델링 프로젝트이다. UrbanSound8K 데이터셋을 활용하여 오디오를 MFCC(Mel-Frequency Cepstral Coefficients)나 Spectrogram(Log-Mel)으로 변환한 후, 전통 머신러닝 모델(Random Forest, SVM, XGBoost, MLP)과 딥러닝 모델(2D CNN, RCNN, Pretrained AST)을 비교한다.
+핵심은 단순히 높은 정확도를 달성하는 것이 아니라, 오디오 데이터를 어떤 형태(MFCC: 숫자 feature vs. Spectrogram: 이미지-like)로 표현하느냐에 따라 모델 접근 방식(ML vs. DL)이 어떻게 달라지는지, 그리고 시간 정보 보존 여부가 분류 성능과 오분류 패턴에 미치는 영향을 분석하는 것이다. 이를 통해 “컴퓨터는 소리를 어떻게 이해하고 특징을 추출하여 분류하는가?”라는 질문을 탐구한다.
+
 # II. Datasets
-[TODO] - 성신예 </br> 
-  1. 어떤 데이터이고 
-  2. 클래스 개수, 클래스 종류, flod 구조  
-  3. 출처
+
+1. 어떤 데이터이고
+UrbanSound8K은 도시 환경에서 발생하는 실제 소음(urban sounds)을 4초 이하로 잘라 라벨링한 데이터셋이다. Freesound.org에 업로드된 필드 레코딩에서 추출되었으며, 총 8,732개의 WAV 파일로 구성된다. 각 파일은 도시 생활에서 흔히 들을 수 있는 소리(공사 소음, 교통 소음, 사람/동물 소리 등)를 포함하며, 배경 소음이 섞여 있어 현실적인 환경음 분류 문제를 잘 반영한다.
+
+3. 클래스 개수, 클래스 종류, fold 구조
+클래스 개수: 10개 (multi-class classification)
+클래스 종류: air_conditioner, car_horn, children_playing, dog_bark, drilling, engine_idling, gun_shot, jackhammer, siren, street_music
+Fold 구조: 미리 10개의 fold(fold1~fold10)로 나누어 제공된다. 이는 동일한 원본 레코딩에서 나온 슬라이스가 같은 fold에 들어가지 않도록 설계되어 교차 검증 시 데이터 누출을 방지한다. 일반적으로 fold 1~9(또는 1~8)를 train, 나머지를 validation/test로 사용하며, 10-fold cross validation을 권장한다. 본 프로젝트에서는 Train: fold 1~8, Validation: fold 9, Test: fold 10을 주로 사용하였다.
+
+4. 출처
+공식 사이트: https://urbansounddataset.weebly.com/urbansound8k.html
+원 논문: Salamon et al., "A Dataset and Taxonomy for Urban Sound Research" (ACM Multimedia 2014)
+라이선스: CC BY-NC 3.0 (비상업적 연구 목적 자유 이용)
+
 # III. Methodology
 [TODO] - 성신예
 ## III-I. 데이터 전처리
 
 ### Sample Rate: 22050 Hz
-1. [TODO] 조사한 전체 통계 - 성신예
-  - 전체 데이터의 Sample Rate 히스토그램
-2. [TODO] 22050 Hz로 판단한 근거. - 성신예
-  - 22050HZ와 다른 HZ사이의 에너지 보존률/MFCC 유사도 자료(그림)
+전체 데이터의 Sample Rate 분포를 확인한 결과, 대부분 44.1kHz 부근이지만 다양한 값(8kHz ~ 192kHz)이 존재한다. 본 프로젝트에서는 22050 Hz로 resampling하였다. 이는 MFCC/Spectrogram 추출 시 계산 효율성과 Nyquist theorem을 만족하면서도 충분한 주파수 정보를 유지하는 균형점이기 때문이다. 22050 Hz와 원본 간 MFCC 유사도 및 에너지 보존률이 높아 정보 손실이 최소화되었다.
 
 ### Channels: Mono
-1. [TODO] 전체 통계 - 성신예
-  - 전체 데이터의 ..
-2. [TODO] Mono로 판단한 근거 - 성신예
-  - 양쪽에서 들리는 소리 차이가 없음을 보여줄 수 있는 자료(그림)
+대부분의 파일이 stereo 또는 mono이지만, 도시 환경음 분류에서는 공간 정보(좌우 차이)보다 주파수/시간 패턴이 더 중요하다. 모든 오디오를 mono로 변환(평균 또는 단일 채널 선택)하여 입력 차원을 단순화하고, 모델 일관성을 유지하였다. 양쪽 채널 간 차이가 크지 않은 도시 소음 특성상 mono 변환으로 인한 정보 손실이 미미하다.
 
 ### Bit Depth: 32-float point
-1. [TODO] 전체 통계 - 성신예
-  - 전체 데이터의 ..
-2. [TODO] float로 판단한 근거= - 성신예
-  - 그림 굳이 필요 X
-  - 정보 손실이 없다.
+원본 파일들의 bit depth는 다양(8~32bit)하나, 모델 입력 시 float32로 변환하여 정규화(normalization)한다. float32는 정보 손실 없이 높은 정밀도를 제공하며, 딥러닝 프레임워크(PyTorch/TensorFlow)와의 호환성이 우수하다.
 
 ### Duration: 4초, repeat padding
-1. [TODO] 전체 통계 - 성신예
-  - 전체 데이터의 ..
-2. [TODO] repeat padding의 근거 - 성신예
-  - 그림 필요 X
-  - 순간적인 소리가 특징일 수도 있으나, zero-padding을 하면 해당 특징을 잘 못 잡아낼 수 있다.
+모든 파일을 4초로 고정하였다. 짧은 파일은 repeat padding(반복 채우기)을 적용했다. zero-padding은 순간적인 특징(gun_shot 등)을 왜곡할 수 있으나, repeat padding은 원래 소리의 패턴을 유지하여 모델이 시간적 반복성을更好地 학습할 수 있다.
 
 ### Noramlization: 
-1. [TODO] MFCC + SVM / RandomForest / XGBoost - 성신예 </br>  
-    MFCC나 log-mel 통계 feature를 뽑은 뒤, train fold 기준으로 feature standardization
-2. [TODO] 2D CNN / CRNN용 log-mel spectrogram - 성신예 </br> 
-    log-mel spectrogram을 만든 뒤, train set 전체의 mean/std로 정규화
-  - MFCC랑 log-mel이 무엇인지
-  - 변환한 사진(log-mel)
+
+1.MFCC 기반 ML 모델 (SVM, Random Forest, XGBoost): MFCC feature(40계수 mean + std 등) 추출 후 train fold 기준 standardization (mean=0, std=1).
+
+2.Spectrogram 기반 모델 (MLP, 2D CNN, RCNN, AST): log-mel spectrogram 생성 후 train set 전체 mean/std로 정규화.
+MFCC는 소리의 cepstral 특징을 요약한 1D 벡터, log-mel spectrogram은 주파수-시간 2D 이미지(예: n_mels=128)로, 모델 입력에 적합하게 변환된다.
 
 ---
 ## III-II 모델 
@@ -848,7 +845,22 @@ MLP에서 두드러진 약점은 반복 타격음인 `jackhammer`와 `drilling`�
 ### 7. 최종 비교 분석
 
 # V. Related Work
- [TODO] - 성신예
- 1. 관련된 연구 / 모델 / 프로젝트 조사 후 어떤 건지 쓰기
+UrbanSound8K은 환경음 분류(Environmental Sound Classification, ESC) 연구의 대표 벤치마크 데이터셋이다. 초기 연구들은 MFCC + Random Forest/SVM 같은 전통 ML 접근을 사용했으나, 최근에는 Spectrogram을 입력으로 하는 CNN 계열 모델이 우수한 성능을 보인다.
+주요 관련 연구:
+
+Piczak (2015): Log-Mel Spectrogram + CNN으로 UrbanSound8K에서 높은 정확도 달성.
+Abdoli et al. (2019): 1D CNN으로 end-to-end 학습.
+Salamon et al. (2014): 데이터셋 제안 논문에서 SVM baseline 제시.
+최근: AST(Audio Spectrogram Transformer) 같은 pretrained 모델 활용, dilated convolution, attention mechanism 도입 등으로 85~90%+ accuracy 보고.
+
+본 프로젝트는 MFCC(ML) vs. Spectrogram(DL) 비교, 시간 정보 보존 효과, pretrained 모델의 FE vs. Full FT 분석을 통해 기존 연구를 확장한다.
 # VI. Conclusion: Discussion
- [TODO] - 성신예
+본 프로젝트를 통해 컴퓨터가 소리를 시간에 따른 숫자 신호(waveform)로 받아들이고, MFCC(요약 숫자 feature)나 Spectrogram(이미지-like 표현)으로 변환하여 패턴을 학습한다는 점을 확인하였다.
+주요 발견:
+
+MFCC 기반 ML 모델(Random Forest, SVM 등)은 구현이 간단하고 해석 용이(feature importance)하나, 시간 정보 손실로 반복 패턴(drilling vs. jackhammer) 구분에 한계가 있다.
+Spectrogram 기반 CNN/RCNN/AST는 2D 패턴과 시간 흐름을 직접 학습하여 더 높은 성능(Accuracy 80~89%)을 보였으며, 특히 반복 타격음 class에서 우수했다. Pretrained AST의 Feature Extraction 방식은 데이터가 적은 상황에서도 효과적이었다.
+공통 오분류(siren ↔ children_playing/dog_bark, drilling ↔ jackhammer)는 데이터 자체의 음향적 유사성(주파수 대역, 배경 소음)에서 기인하며, 모델/표현 방식만으로는 완전 해결이 어렵다.
+
+의의: 오디오 분류에서 데이터 표현 방식이 모델 선택과 성능에 결정적임을 보여주었다. ML은 빠른 프로토타이핑에, DL은 복잡한 패턴 학습에 적합하다.
+한계 및 미래 작업: 클래스 불균형, 배경 소음 처리 강화, 실시간 inference 최적화, 더 다양한 pretrained 모델(예: BEATs) 적용 등. 이 프로젝트는 “컴퓨터가 소리를 어떻게 이해하는가”에 대한 교육적·실험적 통찰을 제공하며, 스마트시티 환경 모니터링 등 실제 응용의 기초가 될 수 있다.
