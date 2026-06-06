@@ -33,13 +33,13 @@
 
 모델 비교는 다음 관점으로 진행한다.
 
-| 비교 관점 | 모델 | 입력 feature | 확인하고 싶은 점 |
-|---|---|---|---|
-| 전통 머신러닝 baseline | SVM, XGBoost | MFCC mean/std 기반 80차원 feature | 손으로 요약한 음향 feature만으로 어느 정도까지 분류 가능한지 |
-| 단순 신경망 baseline | MLP | log-mel spectrogram의 시간축 mean/std 256차원 feature | spectrogram 정보를 1차원으로 압축했을 때의 성능과 한계 |
-| 2D 시간-주파수 패턴 학습 | 2D CNN | log-mel spectrogram `(1, 128, 173)` | spectrogram의 지역적 패턴을 직접 학습하는 효과 |
-| 시간 흐름 반영 | RCNN | log-mel spectrogram sequence | CNN feature에 RNN을 더했을 때 시간적 변화 학습이 도움이 되는지 |
-| 사전학습 표현 활용 | AST Feature Extraction, AST Full Fine-tuning | AudioSet 기반 pretrained AST 입력 | 대규모 오디오 사전학습 모델이 작은 데이터셋에서 얼마나 유리한지 |
+| 비교 관점 | 모델 | 확인하고 싶은 점 |
+|---|---|---|
+| 전통 머신러닝 baseline | SVM, XGBoost | 손으로 요약한 음향 feature만으로 어느 정도까지 분류 가능한지 |
+| 단순 신경망 baseline | MLP | spectrogram 정보를 1차원으로 압축했을 때의 성능과 한계 |
+| 2D 시간-주파수 패턴 학습 | 2D CNN | spectrogram의 지역적 패턴을 직접 학습하는 효과 |
+| 시간 흐름 반영 | RCNN | CNN feature에 RNN을 더했을 때 시간적 변화 학습이 도움이 되는지 |
+| 사전학습 표현 활용 | AST Feature Extraction, AST Full Fine-tuning | 대규모 오디오 사전학습 모델이 작은 데이터셋에서 얼마나 유리한지 |
 
 최종적으로 이 프로젝트는 모델별 성능 순위를 제시하는 것을 넘어, 입력 feature의 정보량, 시간 구조 보존 여부, 모델 복잡도, 사전학습 활용 여부가 도시 환경음 분류 성능에 어떤 영향을 주는지 비교하는 것을 목표로 한다.
 
