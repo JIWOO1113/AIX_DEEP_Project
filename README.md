@@ -701,7 +701,7 @@ Full Fine-tuning 모델은 코드와 같은 디렉터리에 `ast_full_ft_best.pt
 | 고전 ML | SVM | MFCC mean/std | 낮음 | 0.7025 | 0.7236 | 고차원 feature 분류는 가능하지만 복잡한 환경음 분리에는 제한적 |
 | 기본 DL | MLP | log-mel 시간축 요약 | 낮음 | 0.6953 | 0.7102 | 신경망이지만 입력 단계에서 시간 정보를 잃어 성능 향상이 제한됨 |
 | Spectrogram DL | 2D CNN | log-mel 2D 이미지 | 중간 | 0.7754 | 0.7876 | 주파수-시간 패턴을 직접 보면서 반복음 구분이 개선됨 |
-| Spectrogram DL | RCNN | log-mel + CNN + Bi-GRU | 높음 | 0.7849 | 0.8026 | 시간 흐름을 추가로 반영해 CNN보다 소폭 개선 |
+| Spectrogram DL | RCNN | log-mel + CNN + Bi-GRU | 중간 | 0.7849 | 0.8026 | 시간 흐름을 추가로 반영해 CNN보다 소폭 개선 |
 | Pretrained DL | AST FE | pretrained AST + head | 높음 | 0.8829 | 0.8903 | 사전학습 표현만으로도 큰 성능 향상 |
 | Pretrained DL | AST Full FT | pretrained AST 전체 미세조정 | 높음 | 0.8901 | 0.8993 | 전체 모델 중 가장 높은 정확도와 Macro F1 기록 |
 
