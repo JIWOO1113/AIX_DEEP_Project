@@ -25,9 +25,23 @@
   - SVM 구현<br>
   - XGboost 구현<br>
 
-# I. Proposal (Option A)
-이 프로젝트는 도시 환경 소리를 컴퓨터가 분류할 수 있도록 학습시키는 모델링 프로젝트이다. UrbanSound8K 데이터셋을 활용하여 오디오를 MFCC(Mel-Frequency Cepstral Coefficients)나 Spectrogram(Log-Mel)으로 변환한 후, 전통 머신러닝 모델(Random Forest, SVM, XGBoost, MLP)과 딥러닝 모델(2D CNN, RCNN, Pretrained AST)을 비교한다.
-핵심은 단순히 높은 정확도를 달성하는 것이 아니라, 오디오 데이터를 어떤 형태(MFCC: 숫자 feature vs. Spectrogram: 이미지-like)로 표현하느냐에 따라 모델 접근 방식(ML vs. DL)이 어떻게 달라지는지, 그리고 시간 정보 보존 여부가 분류 성능과 오분류 패턴에 미치는 영향을 분석하는 것이다. 이를 통해 “컴퓨터는 소리를 어떻게 이해하고 특징을 추출하여 분류하는가?”라는 질문을 탐구한다.
+# I. Proposal
+
+본 프로젝트의 목적은 UrbanSound8K 데이터셋을 활용하여 도시 환경 소리를 10개 class로 분류하고, 서로 다른 모델 구조와 입력 feature가 분류 성능에 어떤 차이를 만드는지 비교하는 것이다. 단순히 가장 높은 accuracy를 얻는 모델을 찾는 것에 그치지 않고, MFCC 기반 feature vector, log-mel spectrogram, 사전학습 오디오 모델 표현이 각각 어떤 장점과 한계를 가지는지 분석한다.
+
+도시 환경음은 사람 목소리나 음악처럼 일정한 패턴을 갖는 소리뿐 아니라, gun_shot, car_horn처럼 짧고 순간적인 소리, drilling, jackhammer처럼 반복적인 기계음, air_conditioner, engine_idling처럼 배경에 깔리는 지속음까지 포함한다. 따라서 하나의 모델만으로 성능을 판단하기보다, 입력 표현 방식과 모델 구조를 바꾸어가며 어떤 class에서 어떤 접근이 유리한지 확인할 필요가 있다.
+
+모델 비교는 다음 관점으로 진행한다.
+
+| 비교 관점 | 모델 | 입력 feature | 확인하고 싶은 점 |
+|---|---|---|---|
+| 전통 머신러닝 baseline | SVM, XGBoost | MFCC mean/std 기반 80차원 feature | 손으로 요약한 음향 feature만으로 어느 정도까지 분류 가능한지 |
+| 단순 신경망 baseline | MLP | log-mel spectrogram의 시간축 mean/std 256차원 feature | spectrogram 정보를 1차원으로 압축했을 때의 성능과 한계 |
+| 2D 시간-주파수 패턴 학습 | 2D CNN | log-mel spectrogram `(1, 128, 173)` | spectrogram의 지역적 패턴을 직접 학습하는 효과 |
+| 시간 흐름 반영 | RCNN | log-mel spectrogram sequence | CNN feature에 RNN을 더했을 때 시간적 변화 학습이 도움이 되는지 |
+| 사전학습 표현 활용 | AST Feature Extraction, AST Full Fine-tuning | AudioSet 기반 pretrained AST 입력 | 대규모 오디오 사전학습 모델이 작은 데이터셋에서 얼마나 유리한지 |
+
+최종적으로 이 프로젝트는 모델별 성능 순위를 제시하는 것을 넘어, 입력 feature의 정보량, 시간 구조 보존 여부, 모델 복잡도, 사전학습 활용 여부가 도시 환경음 분류 성능에 어떤 영향을 주는지 비교하는 것을 목표로 한다.
 
 # II. Datasets
 
@@ -132,7 +146,7 @@ Fold는 총 10개(`fold1`~`fold10`)로 제공된다. 동일한 원본 레코딩�
 
 ### Duration: 4초, repeat padding
 
-모든 파일을 4초로 고정하였다. 짧은 파일은 repeat padding(반복 채우기)을 적용했다. zero-padding은 순간적인 특징(gun_shot 등)을 왜곡할 수 있으나, repeat padding은 원래 소리의 패턴을 유지하여 모델이 시간적 반복성을 더 잘 학습할 수 있다.
+모든 파일을 4초로 고정하였다. 짧은 파일은 repeat padding(반복 채우기)을 적용했다. 
 
 ### Normalization
 
