@@ -1,5 +1,5 @@
 # 다양한 모델을 활용한 도시 환경 소리의 종류 분류 및 성능 평가
-유튜브 링크: TODO
+유튜브 링크: https://youtu.be/7OSgflhHcE0?si=eznuvC0psF7Tbfkn
 
 ## Members: <br>
 **2020064320 백연지**
